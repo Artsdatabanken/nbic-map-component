@@ -1,0 +1,6 @@
+src/**/*.test.*
+coverage
+vitest.config.ts
+.eslintrc.js
+.prettierrc.json
+tsconfig.json
