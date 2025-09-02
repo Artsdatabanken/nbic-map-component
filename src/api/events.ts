@@ -13,3 +13,19 @@ export type MapEventMap = {
     };
     error: { scope: string; message: string; detail?: unknown };
 };
+
+export const MapEvents = {
+    Ready: 'ready',
+    Destroy: 'destroy',
+    CameraChanged: 'camera:changed',
+    ExtentChanged: 'extent:changed',
+    LayerAdded: 'layer:added',
+    LayerRemoved: 'layer:removed',
+    PointerMove: 'pointer:move',
+    PointerClick: 'pointer:click',
+    Error: 'error',
+} as const;
+
+// Type helpers
+export type MapEventName = keyof MapEventMap;
+export type MapEventPayload<K extends MapEventName> = MapEventMap[K];

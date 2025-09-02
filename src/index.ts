@@ -1,5 +1,7 @@
+// src/index.ts
 export { MapAPI as NbicMapComponent } from './api/MapAPI';
 export type { MapInit } from './api/types';
+export { createMap } from './factory';
 
-// keep your factory too
-export { createMap } from './factory'; // or keep the code you wrote below in this file
+export { MapEvents } from './api/events';
+export type { MapEventName, MapEventPayload } from './api/events';
