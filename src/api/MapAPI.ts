@@ -2,6 +2,7 @@
 import type { Emitter } from '../core/state/store';
 import type {
     MapInit, MapCoord, CameraState, LayerDef, Extent, HitResult,
+    HoverInfoOptions,
 } from './types';
 import type { MapEngine } from '../core/MapEngine';
 import { createEmitter } from '../core/state/store';
@@ -70,6 +71,9 @@ export class MapAPI {
     removeLayer(layerId: string) { this.layerDefs.delete(layerId); this.engine.removeLayer(layerId); this.events.emit('layer:removed', { layerId }); }
     setLayerVisibility(layerId: string, visible: boolean) { this.engine.setLayerVisibility(layerId, visible); }
     reorderLayers(order: string[]) { this.engine.reorderLayers(order); }
+
+    activateHoverInfo(options?: HoverInfoOptions) { this.engine.activateHoverInfo(options); }
+    deactivateHoverInfo() { this.engine.deactivateHoverInfo(); }
 
     pickAt(pixel: [number, number]): HitResult | null { return this.engine.pickAt(pixel); }
 }

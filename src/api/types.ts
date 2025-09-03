@@ -147,3 +147,12 @@ export interface LayerDef {
     base?: boolean;
     background?: string;
 }
+
+export interface HoverInfoOptions {
+    /** Pixel tolerance for hit-testing. Default: 5 */
+    hitTolerance?: number;
+    /** Outline color. Default: '#ffcc00' */
+    outlineColor?: string;
+    /** Outline width in px. Default: 3 */
+    outlineWidth?: number;
+}

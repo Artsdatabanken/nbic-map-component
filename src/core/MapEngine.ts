@@ -1,5 +1,5 @@
 // src/core/MapEngine.ts
-import type { MapInit, MapCoord, CameraState, LayerDef, Extent, HitResult } from '../api/types';
+import type { MapInit, MapCoord, CameraState, LayerDef, Extent, HitResult, HoverInfoOptions } from '../api/types';
 import type { MapEventMap } from '../api/events';
 import type { Emitter } from '../core/state/store';
 
@@ -19,6 +19,9 @@ export interface MapEngine {
     reorderLayers(order: string[]): void;
 
     pickAt(pixel: [number, number]): HitResult | null;
+
+    activateHoverInfo(options?: HoverInfoOptions): void;
+    deactivateHoverInfo(): void;
 }
 
 export type MapEngineFactory = (events: Emitter<MapEventMap>) => MapEngine;

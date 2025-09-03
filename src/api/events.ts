@@ -1,5 +1,8 @@
 // src/api/events.ts
-import type { CameraState, MapCoord, HitResult } from './types';
+import type { CameraState, MapCoord } from './types';
+import type Feature from 'ol/Feature';
+import type BaseLayer from 'ol/layer/Base';
+
 export type MapEventMap = {
     ready: void;
     destroy: void;
@@ -7,11 +10,15 @@ export type MapEventMap = {
     'layer:added': { layerId: string };
     'layer:removed': { layerId: string };
     'pointer:move': { coordinate: MapCoord };
-    'pointer:click': HitResult | null;
+    'pointer:click': { features: { feature: Feature; layer: BaseLayer }[] } | null;
     'extent:changed': {
         extent: [number, number, number, number];
     };
     'baselayer:changed': { layerId: string | null };
+    'hover:info': {
+        coordinate: MapCoord;
+        items: { feature: Feature; layer: BaseLayer }[];
+    } | null;
     error: { scope: string; message: string; detail?: unknown };
 };
 
@@ -25,6 +32,7 @@ export const MapEvents = {
     PointerMove: 'pointer:move',
     PointerClick: 'pointer:click',
     BaselayerChanged: 'baselayer:changed',
+    HoverInfo: 'hover:info',
     Error: 'error',
 } as const;
 
