@@ -7,6 +7,7 @@ import type { Options as WMTSOptions } from 'ol/source/WMTS';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import VectorSource from 'ol/source/Vector';
 import type { Feature } from 'ol';
+import GeoJSON from 'ol/format/GeoJSON';
 
 export type OlTileSource = OSM | XYZ | WMTS;
 export type OlVectorSource = VectorSource<Feature>;
@@ -73,6 +74,14 @@ export function toOlSource(def: SourceDef): OlSource {
             };
 
             return new WMTS(init);
+        }
+
+        case 'geojson': {
+            const { url } = def.options;
+            return new VectorSource({
+                url,
+                format: new GeoJSON(),
+            });
         }
 
         case 'wfs': {

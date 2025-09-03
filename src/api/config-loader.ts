@@ -8,6 +8,7 @@ import type {
     XYZDefOptions,
     WFSDefOptions,
     StyleDef,
+    GeoJSONDefOptions
 } from './types';
 
 export function initMapFromConfig(map: MapAPI, rawJson: unknown) {
@@ -37,6 +38,8 @@ export function initMapFromConfig(map: MapAPI, rawJson: unknown) {
                             return { type: 'wmts', options: (layer.source.options ?? {}) as unknown as WMTSDefOptions } as const;
                         case 'wfs':
                             return { type: 'wfs', options: (layer.source.options ?? {}) as unknown as WFSDefOptions } as const;
+                        case 'geojson': // <-- NEW
+                            return { type: 'geojson', options: (layer.source.options ?? {}) as unknown as GeoJSONDefOptions } as const;
                         default: {
                             // exhaustive guard
                             const src = layer.source as unknown;
@@ -59,6 +62,7 @@ export function initMapFromConfig(map: MapAPI, rawJson: unknown) {
             style,
             visible: layer.visible ?? true,
             zIndex: layer.zIndex,
+            base: layer.base ?? false,
         };
 
         map.addLayer(ld);

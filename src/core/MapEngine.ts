@@ -14,7 +14,7 @@ export interface MapEngine {
     fitExtent(extent: Extent, padding: number): void;
 
     addLayer(def: LayerDef): void;
-    removeLayer(layerId: string): void;
+    removeLayer(layerId: string): void;    
     setLayerVisibility(layerId: string, visible: boolean): void;
     reorderLayers(order: string[]): void;
 

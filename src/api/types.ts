@@ -115,11 +115,17 @@ export interface WMTSDefOptions {
     tileSize?: number;              // default 256
 }
 
+export interface GeoJSONDefOptions {
+    url: string;
+    // (optional) add more later: dataProjection?, strategy?, loader?, etc.
+}
+
 export type SourceDef =
     | { type: 'osm' }
     | { type: 'xyz'; options: XYZDefOptions }
     | { type: 'wmts'; options: WMTSDefOptions }
-    | { type: 'wfs'; options: WFSDefOptions };
+    | { type: 'wfs'; options: WFSDefOptions }
+    | { type: 'geojson'; options: GeoJSONDefOptions };
     // add more later:
     // | { type: 'wfs'; options: WFSDefOptions }
     // | { type: 'ref'; id: string }
@@ -138,4 +144,6 @@ export interface LayerDef {
     style?: StyleDef;
     visible?: boolean;
     zIndex?: number;
+    base?: boolean;
+    background?: string;
 }

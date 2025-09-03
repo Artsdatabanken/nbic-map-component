@@ -11,6 +11,7 @@ export type MapEventMap = {
     'extent:changed': {
         extent: [number, number, number, number];
     };
+    'baselayer:changed': { layerId: string | null };
     error: { scope: string; message: string; detail?: unknown };
 };
 
@@ -23,6 +24,7 @@ export const MapEvents = {
     LayerRemoved: 'layer:removed',
     PointerMove: 'pointer:move',
     PointerClick: 'pointer:click',
+    BaselayerChanged: 'baselayer:changed',
     Error: 'error',
 } as const;
 

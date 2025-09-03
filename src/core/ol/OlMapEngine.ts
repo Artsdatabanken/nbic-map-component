@@ -18,6 +18,43 @@ import { toOlLayer } from './adapters/layers';   // <- only need the layer facto
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
     const layerIndex = new Map<string, BaseLayer>(); // <- this is the built-in Map<K,V>
+    const baseIds = new Set<string>();
+    const BASE_BAND = -10000; // zIndex range for base layers (below overlays)
+    let activeBaseId: string | null = null;
+
+    function markLayer(l: BaseLayer, isBase: boolean) {
+        l.set('nbic:role', isBase ? 'base' : 'overlay');
+    }
+    function isBaseLayer(l: BaseLayer) {
+        return l.get('nbic:role') === 'base';
+    }
+
+    function enforceBaseVisibility(chosenId?: string) {
+        // If a chosen base is made visible, hide all other base layers
+        if (!map) return;
+        if (chosenId && baseIds.has(chosenId)) {
+            for (const id of baseIds) {
+                const lyr = layerIndex.get(id);
+                if (!lyr) continue;
+                lyr.setVisible(id === chosenId);
+            }
+            activeBaseId = chosenId;
+            events.emit('layer:added', { layerId: chosenId }); // optional signal (or add a dedicated baselayer event)
+        } else {
+            // no chosen base; ensure at most one base visible (pick the first visible)
+            let firstVisible: string | null = null;
+            for (const id of baseIds) {
+                const lyr = layerIndex.get(id);
+                if (!lyr) continue;
+                if (lyr.getVisible() && firstVisible === null) {
+                    firstVisible = id;
+                } else {
+                    lyr.setVisible(false);
+                }
+            }
+            activeBaseId = firstVisible;
+        }
+    }
 
     return {
         async init(init: MapInit) {
@@ -55,6 +92,8 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             map?.setTarget(undefined);
             map = undefined;
             layerIndex.clear();           // this is the built-in Map<K,V>, so clear() exists
+            baseIds.clear();
+            activeBaseId = null;
         },
 
         getCamera() {
@@ -83,10 +122,32 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         },
 
         addLayer(def: LayerDef) {
-            const layer = toOlLayer(def); // toOlLayer resolves sources/styles internally
+            const layer = toOlLayer(def);
+            const isBase = !!def.base;
+            markLayer(layer, isBase);
+
             map!.addLayer(layer);
-            if (def.zIndex !== undefined) layer.setZIndex(def.zIndex);
             layerIndex.set(def.id, layer);
+
+            if (isBase) {
+                baseIds.add(def.id);
+                // Put base layers in a low band; keep overlays >= 0
+                // If caller provided zIndex, respect it; otherwise assign in band.
+                if (def.zIndex === undefined) {
+                    // simple stable ordering within base band
+                    layer.setZIndex(BASE_BAND + layerIndex.size);
+                }
+                // If this base is visible, enforce exclusivity
+                if (def.visible ?? layer.getVisible()) {
+                    enforceBaseVisibility(def.id);
+                } else {
+                    // ensure not accidentally visible if another base is active
+                    if (activeBaseId) layer.setVisible(false);
+                }
+            } else {
+                // overlay default zIndex (respect provided zIndex)
+                if (def.zIndex !== undefined) layer.setZIndex(def.zIndex);
+            }
         },
 
         removeLayer(layerId: string) {
@@ -95,14 +156,32 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                 map!.removeLayer(l);
                 layerIndex.delete(layerId);
             }
-        },
+        },        
 
         setLayerVisibility(layerId: string, visible: boolean) {
-            layerIndex.get(layerId)?.setVisible(visible);
+            const l = layerIndex.get(layerId);
+            if (!l) return;
+            const isBase = isBaseLayer(l);
+            if (isBase && visible) {
+                enforceBaseVisibility(layerId); // show this base, hide others
+            } else {
+                l.setVisible(visible);
+            }
         },
 
         reorderLayers(order: string[]) {
-            order.forEach((id, i) => layerIndex.get(id)?.setZIndex(i));
+            // Keep bases in the base band; overlays above.
+            let overlayZ = 0;
+            let baseZ = BASE_BAND;
+            for (const id of order) {
+                const l = layerIndex.get(id);
+                if (!l) continue;
+                if (isBaseLayer(l)) {
+                    l.setZIndex(baseZ++);
+                } else {
+                    l.setZIndex(overlayZ++);
+                }
+            }
         },
 
         pickAt(pixel: [number, number]) {

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const SourceRefSchema = z.object({ ref: z.string().min(1) });
 const InlineSourceSchema = z.object({
-    type: z.enum(['wmts', 'wfs', 'osm', 'xyz'] as const),
+    type: z.enum(['wmts', 'wfs', 'osm', 'xyz', 'geojson'] as const),
     options: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -66,6 +66,7 @@ export const MapConfigSchema = z.object({
         ]).optional(),
         visible: z.boolean().optional(),
         zIndex: z.number().optional(),
+        base: z.boolean().optional(),
     })).optional(),
 }).refine(v => v.minZoom === undefined || v.minZoom <= v.maxZoom, {
     path: ['minZoom'], message: 'minZoom must be ≤ maxZoom'

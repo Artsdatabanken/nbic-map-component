@@ -11,7 +11,7 @@ import type { MapEventMap } from './events';
 export class MapAPI {
     private engine: MapEngine;
     private events: Emitter<MapEventMap>;
-
+    private layerDefs = new Map<string, LayerDef>();
     constructor(init: MapInit, engine?: MapEngine) {
         this.events = createEmitter<MapEventMap>();
         this.engine = engine ?? createOlEngine(this.events);
@@ -44,12 +44,30 @@ export class MapAPI {
         return this.engine.getExtent();
     }
 
+    /** Return all layers marked as base (in insertion order). */
+    getBaseLayers(): LayerDef[] {
+        return Array.from(this.layerDefs.values()).filter(l => !!l.base);
+    }
+
+    /** Return all layers that are not base (overlays). */
+    getOverlayLayers(): LayerDef[] {
+        return Array.from(this.layerDefs.values()).filter(l => !l.base);
+    }
+
+    /** Convenience if you just need IDs */
+    getBaseLayerIds(): string[] {
+        return this.getBaseLayers().map(l => l.id);
+    }
+    getOverlayLayerIds(): string[] {
+        return this.getOverlayLayers().map(l => l.id);
+    }
+
     setCenter(center: MapCoord) { this.engine.setCenter(center); }
     setZoom(zoom: number) { this.engine.setZoom(zoom); }
     fitExtent(extent: Extent, padding = 16) { this.engine.fitExtent(extent, padding); }
 
-    addLayer(layer: LayerDef) { this.engine.addLayer(layer); this.events.emit('layer:added', { layerId: layer.id }); }
-    removeLayer(layerId: string) { this.engine.removeLayer(layerId); this.events.emit('layer:removed', { layerId }); }
+    addLayer(layer: LayerDef) { this.layerDefs.set(layer.id, layer); this.engine.addLayer(layer); this.events.emit('layer:added', { layerId: layer.id }); }
+    removeLayer(layerId: string) { this.layerDefs.delete(layerId); this.engine.removeLayer(layerId); this.events.emit('layer:removed', { layerId }); }
     setLayerVisibility(layerId: string, visible: boolean) { this.engine.setLayerVisibility(layerId, visible); }
     reorderLayers(order: string[]) { this.engine.reorderLayers(order); }
 

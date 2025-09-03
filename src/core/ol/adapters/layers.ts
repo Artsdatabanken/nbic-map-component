@@ -1,5 +1,5 @@
 // src/core/ol/adapters/layers.ts
-import type { LayerDef, SourceInput, StyleDef } from '../../../api/types';
+import type { LayerDef, SourceInput } from '../../../api/types';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import type BaseLayer from 'ol/layer/Base';
@@ -9,8 +9,7 @@ import { toOlStyle } from './styles';
 
 export function toOlLayer(
     def: LayerDef,
-    sourceResolver = resolveOlSource,
-    styleFn = toOlStyle
+    sourceResolver = resolveOlSource,    
 ): BaseLayer {
     const source = sourceResolver(def.source as SourceInput);
 
@@ -30,8 +29,9 @@ export function toOlLayer(
             }
             return new VectorLayer({
                 source,
-                style: def.style ? styleFn(def.style as StyleDef) : undefined,
+                style: def.style ? toOlStyle(def.style) : undefined,
                 visible: def.visible ?? true,
+                ...(def.background ? { background: def.background } : {}),
             });
         }
 
