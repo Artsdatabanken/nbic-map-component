@@ -1,9 +1,4 @@
 // src/core/ol/OlMapEngine.ts
-import { unByKey } from 'ol/Observable';
-import type { EventsKey } from 'ol/events';
-// import type MapBrowserEvent from 'ol/MapBrowserEvent';
-import type { Pixel } from 'ol/pixel';
-import type { FeatureLike } from 'ol/Feature';
 import type BaseLayer from 'ol/layer/Base';
 import { Emitter } from '../state/store';
 import { MapEventMap } from '../../api/events';
@@ -16,13 +11,9 @@ import type {
     LayerDef,
     Extent    
 } from '../../api/types';
-import { Style, Stroke, Fill } from 'ol/style';
 import { View } from 'ol';
 import { toOlLayer } from './adapters/layers';
-import VectorSource from 'ol/source/Vector';
-import VectorLayer from 'ol/layer/Vector';
-import type { Geometry } from 'ol/geom';
-import Feature from 'ol/Feature';
+import { HoverInfoController } from './interactions/HoverInfo';
 
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
@@ -30,19 +21,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     const baseIds = new Set<string>();
     const BASE_BAND = -10000; // zIndex range for base layers (below overlays)
     let activeBaseId: string | null = null;
-    let pointerMoveKey: EventsKey | null = null;
-
-    // let hoverActive = false;
-    let hoverOptions = {
-        hitTolerance: 5,
-        outlineColor: '#ffcc00',
-        outlineWidth: 3,
-        fillColor: 'rgba(255,204,0,0.15)', // optional nice fill
-    };
-
-    let hoverLayer: VectorLayer | null = null;
-    let hoverSource: VectorSource | null = null;
-    let lastHoverId: unknown = null;  // we’ll use feature.getId()
+    let hover: HoverInfoController | null = null;
 
 
     function markLayer(l: BaseLayer, isBase: boolean) {
@@ -77,91 +56,6 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             }
             activeBaseId = firstVisible;
         }
-    }    
-
-    function ensureHoverLayer() {
-        if (!map || hoverLayer) return;
-        hoverSource = new VectorSource();
-        hoverLayer = new VectorLayer({
-            source: hoverSource,
-            style: () => new Style({
-                stroke: new Stroke({ color: hoverOptions.outlineColor, width: hoverOptions.outlineWidth }),
-                fill: new Fill({ color: hoverOptions.fillColor }),
-            }),
-            properties: { 'nbic:role': 'hover' },
-            zIndex: 9_999, // above everything
-            updateWhileInteracting: true,
-        });
-        map.addLayer(hoverLayer);
-    }
-
-    function clearHover() {
-        lastHoverId = null;
-        hoverSource?.clear(true);
-    }
-
-    function destroyHoverLayer() {
-        if (hoverLayer && map) map.removeLayer(hoverLayer);
-        hoverLayer = null;
-        hoverSource = null;
-        lastHoverId = null;
-    }
-
-    function bindPointerMove() {
-        if (!map || pointerMoveKey) return;
-        ensureHoverLayer();
-
-        pointerMoveKey = map.on('pointermove', (evt) => {
-            // Find top-most feature (fast path: bail if no hit)
-            const pixel = evt.pixel as Pixel;
-            const hasHit = map!.hasFeatureAtPixel(pixel, { hitTolerance: hoverOptions.hitTolerance });
-            if (!hasHit) {
-                if (lastHoverId != null) {
-                    clearHover();
-                    // you can emit hover:info null here if you want
-                }
-                return;
-            }
-
-            let top: FeatureLike | undefined;
-            map!.forEachFeatureAtPixel(
-                pixel,
-                (f) => { top = f; return f; },
-                { hitTolerance: hoverOptions.hitTolerance }
-            );
-
-            if (!top) {
-                if (lastHoverId != null) clearHover();
-                return;
-            }
-
-            const id = (top as Feature).getId();
-            if (id === lastHoverId) {
-                // still over same feature → no change
-                return;
-            }
-
-            // update hover layer with a clone of the geometry
-            clearHover();
-            const geom = (top as Feature).getGeometry() as Geometry | null;
-            if (!geom || !hoverSource) return;
-
-            // const clone = geom.clone();
-            const f = new Feature<Geometry>({ geometry: geom.clone() });            
-            if (id !== undefined) f.setId(id);
-
-
-            hoverSource.addFeature(f);
-            lastHoverId = f.getId() ?? id ?? null;
-        });
-    }
-
-    function unbindPointerMove() {
-        if (pointerMoveKey) {
-            unByKey(pointerMoveKey);
-            pointerMoveKey = null;
-        }
-        clearHover();
     }
 
     return {
@@ -206,6 +100,8 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                 } | null = null;
                 map.forEachFeatureAtPixel(evt.pixel, (feature, layer) => {
                     // Only include real ol/Feature instances, not RenderFeature
+                    if (layer?.get && layer.get('nbic:role') === 'hover') return undefined;
+
                     if (
                         feature &&
                         typeof feature.getId === 'function' &&
@@ -219,6 +115,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                         };
                         return true; // stop after first hit
                     }
+                    return undefined;
                 });
 
                 events.emit('pointer:click', hitResult);
@@ -226,8 +123,8 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         },
 
         destroy() {
-            unbindPointerMove();
-            destroyHoverLayer();
+            hover?.destroy();
+            hover = null;
             map?.setTarget(undefined);
             map = undefined;
             layerIndex.clear();
@@ -325,15 +222,12 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         },
         
         activateHoverInfo(options) {
-            // hoverActive = true;
-            if (options) hoverOptions = { ...hoverOptions, ...options };
-            ensureHoverLayer();
-            bindPointerMove();
+            if (!map) return;
+            if (!hover) hover = new HoverInfoController(map, events);
+            hover.activate(options);
         },
         deactivateHoverInfo() {
-            // hoverActive = false;
-            unbindPointerMove();
-            destroyHoverLayer();
+            hover?.deactivate();
         },
 
         pickAt(pixel: [number, number]) {
