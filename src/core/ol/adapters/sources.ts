@@ -3,11 +3,17 @@ import type { SourceDef, SourceInput, WMTSDefOptions, XYZDefOptions } from '../.
 import OSM from 'ol/source/OSM';
 import XYZ from 'ol/source/XYZ';
 import WMTS from 'ol/source/WMTS';
-import type { Options as WMTSOptions } from 'ol/source/WMTS';
-import WMTSTileGrid from 'ol/tilegrid/WMTS';
+// import type { Options as WMTSOptions } from 'ol/source/WMTS';
+// import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import VectorSource from 'ol/source/Vector';
 import type { Feature } from 'ol';
 import GeoJSON from 'ol/format/GeoJSON';
+import { get as getProjection } from 'ol/proj';
+import { makeGridFromExtent } from './wmts-grid';
+import {mapBounds } from '../../projections';
+// import TileLayer from 'ol/layer/Tile';
+// import { getWidth } from 'ol/extent';
+
 
 export type OlTileSource = OSM | XYZ | WMTS;
 export type OlVectorSource = VectorSource<Feature>;
@@ -44,36 +50,45 @@ export function toOlSource(def: SourceDef): OlSource {
             });
         }
 
-        case 'wmts': {
-            const opts: WMTSDefOptions = def.options;
-            if (!opts.url || !opts.layer || !opts.matrixSet) {
-                throw new Error('WMTS source requires url, layer, matrixSet');
+        case 'wmts': {           
+            const o = def.options as WMTSDefOptions;
+
+            // Resolve projection & extent
+            const proj = o.projection ? getProjection(o.projection) : undefined;
+            let extent = o.extent ?? (proj?.getExtent() as [number, number, number, number] | undefined);
+
+            // Optional: fallback to known bounds if projection has none (mapBounds)
+            if (!extent && o.projection) {
+                const b = mapBounds.find(m => m.epsg === o.projection);
+                if (b) extent = b.extent as [number, number, number, number];
             }
 
-            const grid: WMTSTileGrid | undefined =
-                (opts.tileGrid as WMTSTileGrid | undefined) ??
-                (opts.resolutions && opts.origin
-                    ? new WMTSTileGrid({
-                        matrixIds: opts.matrixIds ?? [],
-                        resolutions: opts.resolutions,
-                        origin: opts.origin,
-                        tileSize: opts.tileSize ?? 256,
-                    })
-                    : undefined);
-
-            if (!grid) {
-                throw new Error('WMTS source requires a valid tileGrid (either provided or constructed from resolutions and origin)');
+            if (!extent) {
+                throw new Error(
+                    `WMTS ${o.layer}: missing projection extent; set options.extent or ensure projection is registered with an extent.`
+                );
             }
-            const init: WMTSOptions = {
-                url: opts.url,
-                layer: opts.layer,
-                matrixSet: opts.matrixSet,
-                format: opts.format ?? 'image/png',
-                style: opts.style ?? 'default',
+            
+            const grid = makeGridFromExtent(extent, o.tileSize ?? 256, o.levels ?? 19);
+
+            // REST vs KVP – Kartverket product URLs end with /1.0.0/
+            const isRest = /\/1\.0\.0\/?$/.test(o.url);
+            const baseUrl = o.url.replace(/\/?$/, '/');
+
+            return new WMTS({
+                layer: o.layer,
+                matrixSet: o.matrixSet,
+                format: o.format ?? 'image/png',
+                style: o.style ?? 'default',
                 tileGrid: grid,
-            };
-
-            return new WMTS(init);
+                wrapX: o.wrapX ?? false,      // UTM: usually false
+                transition: 0,
+                attributions: o.attribution,
+                ...(proj ? { projection: proj } : {}), // only include if defined
+                ...(isRest
+                    ? { urls: [baseUrl], requestEncoding: 'REST' as const }
+                    : { url: o.url, requestEncoding: 'KVP' as const }),
+            });
         }
 
         case 'geojson': {

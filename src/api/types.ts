@@ -1,6 +1,7 @@
 // src/api/types.ts
+import type { Extent } from 'ol/extent';
 export type MapCoord = [number, number];         // EPSG:3857 by default (configurable)
-export type Extent = [number, number, number, number];
+// export type Extent = [number, number, number, number];
 
 export interface MapInit {
     target: string | HTMLElement;
@@ -24,14 +25,21 @@ export interface XYZDefOptions {
 export interface WMTSDefOptions {
     url: string;
     layer: string;
-    matrixSet: string;
+    matrixSet: string;              // e.g. "utm33n" or "EPSG:25833"
     format?: string;
     style?: string;
+    tileSize?: number;              // default 256    
+    projection?: string;            // e.g. "EPSG:25833"
+    extent?: Extent;                // full extent of the matrix set (map units)
+    origin?: [number, number];      // top-left of extent (map units)
+    levels?: number;                // how many zoom levels to generate if no resolutions given
+    resolutions?: number[];         // explicit resolutions (map units / pixel)
+    matrixIds?: string[];           // optional explicit matrix ids
+    wrapX?: boolean;
+    opacity?: number;
+    customExtent?: Extent;
+    attribution?: string;
     tileGrid?: unknown;
-    matrixIds?: string[];
-    resolutions?: number[];
-    origin?: [number, number];
-    tileSize?: number;
 }
 
 // NEW: basic WFS option bag (implement later)
@@ -102,18 +110,18 @@ export interface XYZDefOptions {
     tileSize?: number;
 }
 
-export interface WMTSDefOptions {
-    url: string;
-    layer: string;
-    matrixSet: string;              // e.g. 'EPSG:3857'
-    format?: string;                // default 'image/png'
-    style?: string;                 // default 'default'
-    tileGrid?: unknown;             // use ol/tilegrid/WMTS in OL adapter
-    matrixIds?: string[];
-    resolutions?: number[];
-    origin?: [number, number];
-    tileSize?: number;              // default 256
-}
+// export interface WMTSDefOptions {
+//     url: string;
+//     layer: string;
+//     matrixSet: string;              // e.g. 'EPSG:3857'
+//     format?: string;                // default 'image/png'
+//     style?: string;                 // default 'default'
+//     tileGrid?: unknown;             // use ol/tilegrid/WMTS in OL adapter
+//     matrixIds?: string[];
+//     resolutions?: number[];
+//     origin?: [number, number];
+//     tileSize?: number;              // default 256
+// }
 
 export interface GeoJSONDefOptions {
     url: string;

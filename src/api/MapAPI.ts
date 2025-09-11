@@ -1,4 +1,5 @@
 // src/api/MapAPI.ts
+import '../core/projections';
 import type { Emitter } from '../core/state/store';
 import type {
     MapInit, MapCoord, CameraState, LayerDef, Extent, HitResult,
