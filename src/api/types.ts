@@ -43,14 +43,30 @@ export interface WMTSDefOptions {
 }
 
 // NEW: basic WFS option bag (implement later)
+// export interface WFSDefOptions {
+//     url: string;
+//     typeName: string;
+//     srsName?: string;
+//     outputFormat?: string;  // usually 'application/json'
+//     strategy?: 'all' | 'bbox';
+//     maxFeatures?: number;
+//     styleId?: string;
+// }
+// src/api/types.ts
 export interface WFSDefOptions {
-    url: string;
-    typeName: string;
-    srsName?: string;
-    outputFormat?: string;  // usually 'application/json'
-    strategy?: 'all' | 'bbox';
-    maxFeatures?: number;
-    styleId?: string;
+    url: string;                // e.g. https://wfs.nibio.no/cgi-bin/ar50_2
+    typeName: string;           // WFS 1.1.0: typeName, WFS 2.0.0: typeNames (we’ll map)
+    version?: '2.0.0' | '1.1.0';
+    srsName?: string;           // desired output CRS from server (default = view projection)
+    outputFormat?: string;      // 'application/json' preferred, else GML
+    geometryName?: string;      // optional; if unknown, we can infer via DescribeFeatureType later
+    maxFeatures?: number;       // per request (server may cap)
+    headers?: Record<string, string>; // auth etc.
+    params?: Record<string, string | number>; // extra vendor params
+    strategy?: 'bbox' | 'all';  // default 'bbox'
+    featureNS?: string;
+    featureType?: string;
+    minZoomToLoad?: number;     // optional min zoom to trigger loading
 }
 
 // export interface SourceDef {
@@ -154,6 +170,8 @@ export interface LayerDef {
     zIndex?: number;
     base?: boolean;
     background?: string;
+    minZoom?: number;
+    maxZoom?: number;
 }
 
 export interface HoverInfoOptions {

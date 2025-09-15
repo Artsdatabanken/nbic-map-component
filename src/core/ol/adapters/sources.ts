@@ -1,5 +1,5 @@
 // src/core/ol/adapters/sources.ts
-import type { SourceDef, SourceInput, WMTSDefOptions, XYZDefOptions } from '../../../api/types';
+import type { SourceDef, SourceInput, WMTSDefOptions, XYZDefOptions, WFSDefOptions } from '../../../api/types';
 import OSM from 'ol/source/OSM';
 import XYZ from 'ol/source/XYZ';
 import WMTS from 'ol/source/WMTS';
@@ -10,6 +10,7 @@ import type { Feature } from 'ol';
 import GeoJSON from 'ol/format/GeoJSON';
 import { get as getProjection } from 'ol/proj';
 import { makeGridFromExtent } from './wmts-grid';
+import { createWfsVectorSource } from './wfs-loader';
 import {mapBounds } from '../../projections';
 // import TileLayer from 'ol/layer/Tile';
 // import { getWidth } from 'ol/extent';
@@ -92,15 +93,21 @@ export function toOlSource(def: SourceDef): OlSource {
         }
 
         case 'geojson': {
-            const { url } = def.options;
+            const { url } = def.options;            
             return new VectorSource({
                 url,
-                format: new GeoJSON(),
+                format: new GeoJSON(),  // always reproject to view projection
             });
         }
 
         case 'wfs': {
-            throw new Error('WFS source type is not supported in this adapter.');
+            const o = def.options as WFSDefOptions;
+
+            // Choose the target projection for features (match the map’s view)
+            // If your engine always creates the view first, you can pass it down instead; here we default to srsName or EPSG:3857.
+            const viewProj = o.srsName ?? 'EPSG:3857';
+
+            return createWfsVectorSource(o, viewProj);
         }
         default: {
             const type = (def as { type?: string }).type;

@@ -26,7 +26,7 @@ const map = createMap('map', {
     version: 1,
     projection: 'EPSG:25833',          // View must match WMTS projection
     center: [385056, 7155942],       // pick a reasonable center in EPSG:25833
-    zoom: 6,
+    zoom: 11,
     minZoom: 0,
     maxZoom: 18,
 });
@@ -48,9 +48,66 @@ map.addLayer({
             style: 'default',
             wrapX: false,                   // UTM – usually false
             opacity: 1,
+
         },
     },
+    visible: true
+});
+
+map.addLayer({
+    id: "eco",
+    kind: "vector",
+    visible: false,
+    source: { type: "geojson", options: { url: "https://openlayers.org/data/vector/ecoregions.json" } },
+    // you can’t encode a function in JSON; apply style later imperatively
+})
+
+map.addLayer({
+    id: 'ar50',
+    kind: 'vector',
+    visible: false,
+    base: false,
+    source: {
+        type: 'wfs',
+        options: {
+            url: 'https://wfs.nibio.no/cgi-bin/ar50_2',
+            typeName: 'ms:AR50',
+            version: '2.0.0',
+            srsName: 'EPSG:25833',
+            outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
+            strategy: 'bbox',
+            // maxFeatures: 5000,
+            minZoomToLoad: 14,            
+        },
+    },
+    maxZoom: 18,
+    minZoom: 8,
+    style: { type: 'simple', options: { strokeColor: '#9e7795', strokeWidth: 1 } },
+});
+
+map.addLayer({
+    id: 'kommune',
+    kind: 'vector',
     visible: true,
+    base: false,
+    source: {
+        type: 'wfs',
+        options: {
+            url: 'https://wfs.geonorge.no/skwms1/wfs.administrative_enheter',
+            outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
+            typeName: 'app:Kommune',
+            srsName: 'EPSG:25833',
+            minZoomToLoad: 5,
+            strategy: 'bbox',
+        },
+    },
+    maxZoom: 18,
+    minZoom: 5,
+    style: { type: 'simple', options: { strokeColor: '#3399FF', strokeWidth: 2, fillColor: 'rgba(46, 46, 46, 0.1)' } },
+})
+
+map.on('pointer:click', (event) => {
+    console.log('Map clickedA:', event);
 });
 
 declare global {

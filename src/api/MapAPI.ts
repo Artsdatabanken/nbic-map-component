@@ -2,14 +2,14 @@
 import '../core/projections';
 import type { Emitter } from '../core/state/store';
 import type {
-    MapInit, MapCoord, CameraState, LayerDef, Extent, HitResult,
+    MapInit, MapCoord, CameraState, LayerDef, HitResult,
     HoverInfoOptions,
 } from './types';
 import type { MapEngine } from '../core/MapEngine';
 import { createEmitter } from '../core/state/store';
 import { createOlEngine } from '../core/ol/OlMapEngine';
 import type { MapEventMap } from './events';
-
+import type { Extent } from 'ol/extent';
 export class MapAPI {
     private engine: MapEngine;
     private events: Emitter<MapEventMap>;

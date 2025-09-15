@@ -8,12 +8,13 @@ import type {
     MapInit,
     MapCoord,
     CameraState,
-    LayerDef,
-    Extent    
+    LayerDef        
 } from '../../api/types';
-import { View } from 'ol';
+import { Feature, View } from 'ol';
 import { toOlLayer } from './adapters/layers';
 import { HoverInfoController } from './interactions/HoverInfo';
+import type { Extent } from 'ol/extent';
+import type { Geometry } from 'ol/geom';
 
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
@@ -92,33 +93,25 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             map.on('singleclick', (evt) => {
                 if (!map) return;
 
-                let hitResult: {
-                    featureId: string;
-                    layerId: string;
-                    properties: Record<string, unknown>;
-                    coordinate: number[];
-                } | null = null;
-                map.forEachFeatureAtPixel(evt.pixel, (feature, layer) => {
-                    // Only include real ol/Feature instances, not RenderFeature
-                    if (layer?.get && layer.get('nbic:role') === 'hover') return undefined;
+                type ClickFeature = { feature: Feature<Geometry>; layer: BaseLayer; featureId: string; layerId: string; properties?: Record<string, unknown> };
+                const features: ClickFeature[] = [];
 
-                    if (
-                        feature &&
-                        typeof feature.getId === 'function' &&
-                        typeof feature.getProperties === 'function'
-                    ) {
-                        hitResult = {
-                            featureId: feature.getId() as string,
-                            layerId: (layer && 'get' in layer && typeof layer.get === 'function' ? layer.get('id') : undefined) ?? '',
-                            properties: feature.getProperties(),
-                            coordinate: evt.coordinate,
-                        };
-                        return true; // stop after first hit
+                map.forEachFeatureAtPixel(
+                    evt.pixel,
+                    (f, l) => {
+                        if (!f || typeof (f as Feature<Geometry>).getProperties !== 'function') return undefined;
+                        features.push({ feature: f as Feature<Geometry>, layer: l as BaseLayer, featureId: f.getId() as string, layerId: l.get('id') as string, properties: (f as Feature<Geometry>).getProperties() });
+                        return undefined; // continue collecting overlaps
+                    },
+                    {
+                        hitTolerance: 5,
+                        layerFilter: (l) =>
+                            (l as BaseLayer).getVisible?.() !== false &&
+                            (l as BaseLayer).get?.('nbic:role') !== 'hover',   // ← ignore hover layer
                     }
-                    return undefined;
-                });
+                );
 
-                events.emit('pointer:click', hitResult);
+                events.emit('pointer:click', features.length ? { features } : null);
             });
         },
 

@@ -2,6 +2,7 @@
 import type { CameraState, MapCoord } from './types';
 import type Feature from 'ol/Feature';
 import type BaseLayer from 'ol/layer/Base';
+import type { Extent } from 'ol/extent';
 
 export type MapEventMap = {
     ready: void;
@@ -12,7 +13,7 @@ export type MapEventMap = {
     'pointer:move': { coordinate: MapCoord };
     'pointer:click': { features: { feature: Feature; layer: BaseLayer }[] } | null;
     'extent:changed': {
-        extent: [number, number, number, number];
+        extent: Extent;
     };
     'baselayer:changed': { layerId: string | null };
     'hover:info': {
