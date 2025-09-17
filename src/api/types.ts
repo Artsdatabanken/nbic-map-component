@@ -1,6 +1,37 @@
 // src/api/types.ts
 import type { Extent } from 'ol/extent';
 export type MapCoord = [number, number];         // EPSG:3857 by default (configurable)
+export type DrawKind = 'Point' | 'LineString' | 'Polygon' | 'Circle' | 'Text';
+
+export interface DrawStyleOptions {
+    strokeColor?: string;
+    strokeWidth?: number;
+    fillColor?: string;
+    pointRadius?: number;
+    text?: {
+        label?: string;         // used for “Text” draw; default empty (you can set later)
+        font?: string;          // e.g. '14px Inter'
+        fillColor?: string;     // text fill
+        strokeColor?: string;   // text halo
+        strokeWidth?: number;
+        offsetX?: number;
+        offsetY?: number;
+    };
+}
+
+export interface DrawOptions {
+    kind: DrawKind;
+    style?: DrawStyleOptions;
+    snap?: boolean;           // default: true
+}
+
+export interface DrawExportOptions {
+    pretty?: boolean;
+}
+
+export interface DrawImportOptions {
+    clearExisting?: boolean;  // default: false
+}
 // export type Extent = [number, number, number, number];
 
 export interface MapInit {

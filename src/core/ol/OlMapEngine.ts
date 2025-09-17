@@ -15,6 +15,15 @@ import { toOlLayer } from './adapters/layers';
 import { HoverInfoController } from './interactions/HoverInfo';
 import type { Extent } from 'ol/extent';
 import type { Geometry } from 'ol/geom';
+import VectorSource from 'ol/source/Vector';
+import VectorLayer from 'ol/layer/Vector';
+import Draw from 'ol/interaction/Draw';
+import Modify from 'ol/interaction/Modify';
+import Snap from 'ol/interaction/Snap';
+import GeoJSON from 'ol/format/GeoJSON';
+// import type { Geometry } from 'ol/geom';
+// import type Feature from 'ol/Feature';
+import { makeDrawStyle } from './adapters/draw-style';
 
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
@@ -23,7 +32,34 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     const BASE_BAND = -10000; // zIndex range for base layers (below overlays)
     let activeBaseId: string | null = null;
     let hover: HoverInfoController | null = null;
+    let drawSource: VectorSource<Feature<Geometry>> | null = null;
+    let drawLayer: VectorLayer<VectorSource<Feature<Geometry>>> | null = null;
 
+    let drawInteraction: Draw | null = null;
+    let modifyInteraction: Modify | null = null;
+    let snapInteraction: Snap | null = null;
+
+    let currentDrawStyle = makeDrawStyle(undefined);
+
+    function ensureDrawLayer() {
+        if (!map || drawLayer) return;
+        drawSource = new VectorSource<Feature<Geometry>>();
+        drawLayer = new VectorLayer({
+            source: drawSource,
+            style: currentDrawStyle,
+            properties: { 'nbic:role': 'draw' },
+            zIndex: 9000,
+            updateWhileInteracting: true,
+        });
+        map.addLayer(drawLayer);
+    }
+
+    function removeDrawInteractions() {
+        if (!map) return;
+        if (drawInteraction) { map.removeInteraction(drawInteraction); drawInteraction = null; }
+        if (modifyInteraction) { map.removeInteraction(modifyInteraction); modifyInteraction = null; }
+        if (snapInteraction) { map.removeInteraction(snapInteraction); snapInteraction = null; }
+    }
 
     function markLayer(l: BaseLayer, isBase: boolean) {
         l.set('nbic:role', isBase ? 'base' : 'overlay');
@@ -57,6 +93,19 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             }
             activeBaseId = firstVisible;
         }
+    }
+
+    function isPickableLayer(l: unknown): boolean {
+        // guard null/undefined
+        if (!l || typeof (l as BaseLayer).get !== 'function') return false;
+        const get = (l as BaseLayer).get.bind(l);
+        // skip temporary layers
+        const role = get('nbic:role');
+        if (role === 'hover') return false;   // and optionally: if (role === 'draw') return false;
+        // respect visibility if available
+        const vis = (l as BaseLayer).getVisible?.();
+        if (vis === false) return false;
+        return true;
     }
 
     return {
@@ -100,7 +149,8 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                     evt.pixel,
                     (f, l) => {
                         if (!f || typeof (f as Feature<Geometry>).getProperties !== 'function') return undefined;
-                        features.push({ feature: f as Feature<Geometry>, layer: l as BaseLayer, featureId: f.getId() as string, layerId: l.get('id') as string, properties: (f as Feature<Geometry>).getProperties() });
+                        if (!isPickableLayer(l)) return undefined;
+                        features.push({ feature: f as Feature<Geometry>, layer: l as BaseLayer, featureId: f.getId() as string, layerId: l.get('id') as string, properties: (f as Feature<Geometry>).getProperties() });                        
                         return undefined; // continue collecting overlaps
                     },
                     {
@@ -227,12 +277,129 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             if (!map) return null;
             const coordinate = map.getCoordinateFromPixel(pixel) as MapCoord | undefined;
             if (!coordinate) return null;
-            return map.forEachFeatureAtPixel(pixel, (feature, layer) => ({
-                layerId: (layer && 'get' in layer && typeof layer.get === 'function' ? layer.get('id') : undefined) ?? '',
-                featureId: feature.getId() as string,
-                properties: feature.getProperties(),
-                coordinate: coordinate,
-            })) ?? null;
+            // return map.forEachFeatureAtPixel(pixel, (feature, layer) => ({
+            //     layerId: (layer && 'get' in layer && typeof layer.get === 'function' ? layer.get('id') : undefined) ?? '',
+            //     featureId: feature.getId() as string,
+            //     properties: feature.getProperties(),
+            //     coordinate: coordinate,
+            // })) ?? null;
+            return (
+                map.forEachFeatureAtPixel(
+                    pixel,
+                    (feature, layer) => {
+                        if (!isPickableLayer(layer)) return undefined;
+                        return {
+                            layerId:
+                                (layer && 'get' in layer && typeof layer.get === 'function' ? layer.get('id') : undefined) ?? '',
+                            featureId: (feature as Feature).getId() as string | number | undefined,
+                            properties: (feature as Feature).getProperties(),
+                            coordinate: coordinate,
+                        };
+                    },
+                    { hitTolerance: 5, layerFilter: isPickableLayer }
+                ) ?? null
+            );
+        },
+
+        // Drawing methods
+        startDrawing(opts) {
+            if (!map) return;
+            ensureDrawLayer();
+            removeDrawInteractions();
+
+            currentDrawStyle = makeDrawStyle(opts.style);
+
+            // “Text” is drawn as a Point; you can set/override label later on the feature.
+            const olType = opts.kind === 'Text' ? 'Point' : opts.kind;
+
+            drawInteraction = new Draw({
+                source: drawSource!,
+                type: olType as 'Point' | 'LineString' | 'Polygon' | 'Circle',
+                style: currentDrawStyle,
+            });
+
+            drawInteraction.on('drawstart', () => {
+                events.emit('draw:start', { kind: opts.kind });
+            });
+
+            drawInteraction.on('drawend', (e) => {
+                const f = e.feature as Feature<Geometry>;
+                // if Text → put label present in style options (optional)
+                if (opts.kind === 'Text' && opts.style?.text?.label) {
+                    f.set('label', opts.style.text.label);
+                }
+                events.emit('draw:end', { feature: f });
+            });
+
+            map.addInteraction(drawInteraction);
+
+            // Editing while drawing? (snap makes drawing easier)
+            const wantSnap = opts.snap ?? true;
+            modifyInteraction = new Modify({ source: drawSource! });
+            map.addInteraction(modifyInteraction);
+            modifyInteraction.on('modifyend', (e) => {
+                events.emit('edit:modified', { count: e.features.getLength() });
+            });
+
+            if (wantSnap) {
+                snapInteraction = new Snap({ source: drawSource! });
+                map.addInteraction(snapInteraction);
+            }
+        },
+
+        stopDrawing() {
+            removeDrawInteractions();
+        },
+
+        enableDrawEditing() {
+            if (!map) return;
+            ensureDrawLayer();
+            if (!modifyInteraction) {
+                modifyInteraction = new Modify({ source: drawSource! });
+                map.addInteraction(modifyInteraction);
+                modifyInteraction.on('modifyend', (e) => {
+                    events.emit('edit:modified', { count: e.features.getLength() });
+                });
+            }
+            if (!snapInteraction) {
+                snapInteraction = new Snap({ source: drawSource! });
+                map.addInteraction(snapInteraction);
+            }
+        },
+
+        disableDrawEditing() {
+            if (!map) return;
+            if (modifyInteraction) { map.removeInteraction(modifyInteraction); modifyInteraction = null; }
+            if (snapInteraction) { map.removeInteraction(snapInteraction); snapInteraction = null; }
+        },
+
+        clearDrawn() {
+            const count = drawSource?.getFeatures().length ?? 0;
+            drawSource?.clear(true);
+            events.emit('draw:cleared', { count });
+        },
+
+        exportDrawnGeoJSON(opts) {
+            // serialize using view projection
+            const fmt = new GeoJSON();
+            const json = fmt.writeFeatures(drawSource?.getFeatures() ?? [], {
+                featureProjection: String(map?.getView().getProjection() ?? 'EPSG:3857'),
+            });
+            return opts?.pretty ? JSON.stringify(JSON.parse(json), null, 2) : json;
+        },
+
+        importDrawnGeoJSON(geojson, opts) {
+            if (!map) return;
+            ensureDrawLayer();
+
+            const fmt = new GeoJSON();
+            const features = fmt.readFeatures(geojson, {
+                featureProjection: String(map.getView().getProjection()),
+            });
+
+            if (opts?.clearExisting) drawSource!.clear(true);
+            drawSource!.addFeatures(features);
+            events.emit('draw:imported', { count: features.length });
         }
     };
 }

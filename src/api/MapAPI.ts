@@ -4,6 +4,9 @@ import type { Emitter } from '../core/state/store';
 import type {
     MapInit, MapCoord, CameraState, LayerDef, HitResult,
     HoverInfoOptions,
+    DrawImportOptions,
+    DrawExportOptions,
+    DrawOptions,
 } from './types';
 import type { MapEngine } from '../core/MapEngine';
 import { createEmitter } from '../core/state/store';
@@ -77,4 +80,15 @@ export class MapAPI {
     deactivateHoverInfo() { this.engine.deactivateHoverInfo(); }
 
     pickAt(pixel: [number, number]): HitResult | null { return this.engine.pickAt(pixel); }
+
+    startDrawing(opts: DrawOptions) { this.engine.startDrawing(opts); }
+    stopDrawing() { this.engine.stopDrawing(); }
+
+    enableDrawEditing() { this.engine.enableDrawEditing(); }
+    disableDrawEditing() { this.engine.disableDrawEditing(); }
+
+    clearDrawn() { this.engine.clearDrawn(); }
+
+    exportDrawnGeoJSON(opts?: DrawExportOptions) { return this.engine.exportDrawnGeoJSON(opts); }
+    importDrawnGeoJSON(text: string, opts?: DrawImportOptions) { this.engine.importDrawnGeoJSON(text, opts); }
 }

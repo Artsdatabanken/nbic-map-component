@@ -3,6 +3,7 @@ import type { CameraState, MapCoord } from './types';
 import type Feature from 'ol/Feature';
 import type BaseLayer from 'ol/layer/Base';
 import type { Extent } from 'ol/extent';
+import type { Geometry } from 'ol/geom';
 
 export type MapEventMap = {
     ready: void;
@@ -20,6 +21,11 @@ export type MapEventMap = {
         coordinate: MapCoord;
         items: { feature: Feature; layer: BaseLayer }[];
     } | null;
+    'draw:start': { kind: string };
+    'draw:end': { feature: Feature<Geometry> };
+    'draw:imported': { count: number };
+    'draw:cleared': { count: number };
+    'edit:modified': { count: number };
     error: { scope: string; message: string; detail?: unknown };
 };
 
