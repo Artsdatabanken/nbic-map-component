@@ -107,9 +107,9 @@ map.addLayer({
     style: { type: 'simple', options: { strokeColor: '#3399FF', strokeWidth: 2, fillColor: 'rgba(46, 46, 46, 0.1)' } },
 })
 
-map.on('pointer:click', (event) => {
-    console.log('Map clickedA:', event);
-});
+// map.on('pointer:click', (event) => {
+//     console.log('Map clickedA:', event);
+// });
 
 declare global {
     interface Window {

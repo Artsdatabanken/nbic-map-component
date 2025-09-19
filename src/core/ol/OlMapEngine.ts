@@ -8,7 +8,8 @@ import type {
     MapInit,
     MapCoord,
     CameraState,
-    LayerDef        
+    LayerDef,        
+    DrawStyleOptions
 } from '../../api/types';
 import { Feature, View } from 'ol';
 import { toOlLayer } from './adapters/layers';
@@ -45,6 +46,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let drawInteraction: Draw | null = null;
     let modifyInteraction: Modify | null = null;
     let snapInteraction: Snap | null = null;
+    
 
     let currentDrawStyle = makeDrawStyle(undefined);
 
@@ -438,13 +440,19 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         startDrawing(opts) {
             if (!map) return;
             ensureDrawLayer();
-            removeDrawInteractions();
+            removeDrawInteractions(); // remove any old draw/modify/snap
 
             currentDrawStyle = makeDrawStyle(opts.style);
-
-            // “Text” is drawn as a Point; you can set/override label later on the feature.
             const olType = opts.kind === 'Text' ? 'Point' : opts.kind;
 
+            // 1) Ensure a Modify exists, but DISABLE IT NOW
+            if (!modifyInteraction) {
+                modifyInteraction = new Modify({ source: drawSource! });
+                map.addInteraction(modifyInteraction);
+            }
+            modifyInteraction.setActive(false); // ← critical: before first click
+
+            // 2) Create Draw
             drawInteraction = new Draw({
                 source: drawSource!,
                 type: olType as 'Point' | 'LineString' | 'Polygon' | 'Circle',
@@ -457,25 +465,20 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
 
             drawInteraction.on('drawend', (e) => {
                 const f = e.feature as Feature<Geometry>;
-                // if Text → put label present in style options (optional)
-                if (opts.kind === 'Text' && opts.style?.text?.label) {
-                    f.set('label', opts.style.text.label);
-                }
+                const styleOptions = opts.style;
+                f.set('nbic:style', styleOptions);
+                f.setStyle(makeDrawStyle(styleOptions));
+                // Re-enable modify AFTER finishing the new feature
+                modifyInteraction?.setActive(true);
                 events.emit('draw:end', { feature: f });
             });
 
             map.addInteraction(drawInteraction);
 
-            // Editing while drawing? (snap makes drawing easier)
-            const wantSnap = opts.snap ?? true;
-            modifyInteraction = new Modify({ source: drawSource! });
-            map.addInteraction(modifyInteraction);
-            modifyInteraction.on('modifyend', (e) => {
-                events.emit('edit:modified', { count: e.features.getLength() });
-            });
-
-            if (wantSnap) {
-                snapInteraction = new Snap({ source: drawSource! });
+            // 3) Snap (keeps the vertex exactly on edge/vertex)
+            const snapTolerance = Math.max(2, Math.min(25, 10));
+            if (opts.snap ?? true) {
+                snapInteraction = new Snap({ source: drawSource!, pixelTolerance: snapTolerance });
                 map.addInteraction(snapInteraction);
             }
         },
@@ -531,6 +534,18 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             });
 
             if (opts?.clearExisting) drawSource!.clear(true);
+            for (const f of features) {
+                const styleOpts = f.get('nbic:style') as DrawStyleOptions | undefined;
+                if (styleOpts) {
+                    f.setStyle(makeDrawStyle(styleOpts)); // ← persist style after import
+                }
+                // for text points, if you store a 'label' property:
+                const label = f.get('label') as string | undefined;
+                if (label && styleOpts?.text) {
+                    // ensure text label is applied (makeDrawStyle reads text.label)
+                    f.setStyle(makeDrawStyle({ ...styleOpts, text: { ...styleOpts.text, label } }));
+                }
+            }
             drawSource!.addFeatures(features);
             events.emit('draw:imported', { count: features.length });
         },
