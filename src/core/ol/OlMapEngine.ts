@@ -25,6 +25,13 @@ import GeoJSON from 'ol/format/GeoJSON';
 // import type Feature from 'ol/Feature';
 import { makeDrawStyle } from './adapters/draw-style';
 
+import FullScreen from 'ol/control/FullScreen';
+import ScaleLine from 'ol/control/ScaleLine';
+import Geolocation from 'ol/Geolocation';
+
+import { Circle as CircleGeom, Point } from 'ol/geom';
+import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
+
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
     const layerIndex = new Map<string, BaseLayer>(); // <- this is the built-in Map<K,V>
@@ -40,6 +47,112 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let snapInteraction: Snap | null = null;
 
     let currentDrawStyle = makeDrawStyle(undefined);
+
+    // Controls
+    let ctrlFull: FullScreen | null = null;
+    let ctrlScale: ScaleLine | null = null;
+
+    // Geolocation
+    let geo: Geolocation | null = null;
+    let geoLayer: VectorLayer<VectorSource> | null = null;
+    let geoSource: VectorSource | null = null;
+    let geoFollow = false;
+
+    function ensureScaleLine() {
+        if (!map || ctrlScale) return;
+        ctrlScale = new ScaleLine();
+        map.addControl(ctrlScale);
+        events.emit('controls:scaleline', { visible: true });
+    }
+
+    function removeScaleLine() {
+        if (!map || !ctrlScale) return;
+        map.removeControl(ctrlScale);
+        ctrlScale = null;
+        events.emit('controls:scaleline', { visible: false });
+    }
+
+    function ensureFullScreen() {
+        if (!map || ctrlFull) return;
+        ctrlFull = new FullScreen();
+        map.addControl(ctrlFull);
+    }
+
+    function ensureGeo() {
+        if (!map || geo) return;
+
+        geo = new Geolocation({
+            projection: map.getView().getProjection(),
+            tracking: false,
+            trackingOptions: { enableHighAccuracy: true, maximumAge: 10_000, timeout: 10_000 },
+        });        
+
+        geo.on('change:position', () => {
+            if (!geo || !map) return;
+            const p = geo.getPosition() as [number, number] | null;
+            const acc = geo.getAccuracy();
+            if (!p) {
+                events.emit('geo:position', null);
+                return;
+            }
+            // draw marker & accuracy
+            ensureGeoLayer();
+            geoSource!.clear();
+            const accGeom = new CircleGeom(p, acc || 0);
+            const ptGeom = new Point(p);
+            geoSource!.addFeatures([
+                new Feature({ geometry: accGeom }),
+                new Feature({ geometry: ptGeom }),
+            ]);
+
+            if (geoFollow) {
+                map.getView().setCenter(p);
+            }
+            events.emit('geo:position', { coordinate: p, accuracy: acc ?? undefined });
+        });
+
+        geo.on('error', (e) => {
+            events.emit('geo:error', { message: ((e as unknown) as Error).message ?? 'Geolocation error' });
+        });
+    }
+
+    function ensureGeoLayer() {
+        if (!map || geoLayer) return;
+        geoSource = new VectorSource();
+        geoLayer = new VectorLayer({
+            source: geoSource,
+            properties: { 'nbic:role': 'geolocation' },
+            zIndex: 9998,
+            style: (f) => {
+                const g = f.getGeometry();
+                if (g instanceof CircleGeom) {
+                    return new Style({
+                        fill: new Fill({ color: 'rgba(33, 150, 243, 0.15)' }),
+                        stroke: new Stroke({ color: '#2196f3', width: 1 }),
+                    });
+                }
+                return new Style({
+                    image: new CircleStyle({
+                        radius: 6,
+                        fill: new Fill({ color: '#2196f3' }),
+                        stroke: new Stroke({ color: '#ffffff', width: 2 }),
+                    }),
+                });
+            },
+        });
+        map.addLayer(geoLayer);
+    }
+
+    function removeGeo() {
+        if (!map) return;
+        if (geo) {
+            geo.setTracking(false);
+            geo.un('change:position', () => { });
+            geo = null;
+        }
+        if (geoLayer) { map.removeLayer(geoLayer); geoLayer = null; }
+        geoSource = null;
+    }
 
     function ensureDrawLayer() {
         if (!map || drawLayer) return;
@@ -124,6 +237,26 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                 controls: undefined,        // add defaults later if needed
                 interactions: undefined,
             });
+
+            // Controls requested at init
+            if (init.controls?.fullscreen) ensureFullScreen();
+            if (init.controls?.scaleLine) ensureScaleLine();
+            if (init.controls?.geolocation) {
+                ensureGeo();
+                if (init.controls?.geolocationFollow) {
+                    geoFollow = true;
+                    geo!.setTracking(true);
+                }
+            }
+
+            // Fullscreen event (listen to native Fullscreen API)
+            const targetEl = map.getTargetElement();
+            if (targetEl) {
+                targetEl.addEventListener('fullscreenchange', () => {
+                    const active = document.fullscreenElement === targetEl;
+                    events.emit('fullscreen:change', { active });
+                });
+            }
 
             map.on('moveend', () => {
                 if (!map) return;
@@ -400,6 +533,62 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             if (opts?.clearExisting) drawSource!.clear(true);
             drawSource!.addFeatures(features);
             events.emit('draw:imported', { count: features.length });
+        },
+
+        enterFullScreen() {
+            if (!map) return;
+            const el = map.getTargetElement();
+            if (el && !document.fullscreenElement) {
+                void el.requestFullscreen().catch(() => {/* ignore */ });
+            }
+        },
+
+        leaveFullScreen() {
+            if (document.fullscreenElement) {
+                void document.exitFullscreen().catch(() => {/* ignore */ });
+            }
+        },
+
+        showScaleLine() { ensureScaleLine(); },
+        hideScaleLine() { removeScaleLine(); },
+
+        activateGeolocation(follow?: boolean) {
+            if (!map) return;
+            ensureGeo();
+            geoFollow = !!follow;
+            geo!.setTracking(true);
+        },
+
+        deactivateGeolocation() {
+            geoFollow = false;
+            if (geo) geo.setTracking(false);
+            // keep layer so last position remains visible; remove if you prefer:
+            geoSource?.clear(); 
+            removeGeo();
+        },
+        async zoomToGeolocation(maxZoom = 14): Promise<boolean> {
+            if (!map) return false;
+            ensureGeo();
+            geo!.setTracking(true);
+
+            return new Promise<boolean>((resolve) => {
+                const once = () => {
+                    const p = geo!.getPosition() as [number, number] | null;
+                    if (p) {
+                        ensureGeoLayer();
+                        if (map) {
+                            map.getView().animate({ center: p, zoom: Math.max(map.getView().getZoom() ?? 0, maxZoom), duration: 300 });
+                        }
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                    geo!.un('change:position', once);
+                    // stop tracking if you don’t want continuous updates:
+                    geo!.setTracking(false);
+                };
+                geo!.on('change:position', once);
+            });
         }
     };
 }

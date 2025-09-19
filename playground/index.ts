@@ -29,6 +29,7 @@ const map = createMap('map', {
     zoom: 11,
     minZoom: 0,
     maxZoom: 18,
+    controls: { scaleLine: true, fullscreen: true, geolocation: true },
 });
 
 map.addLayer({

@@ -34,7 +34,7 @@ export class MapAPI {
     }
     off<K extends keyof MapEventMap>(type: K, cb: (payload: MapEventMap[K]) => void) {
         return this.events.off(type, cb);
-    }
+    }    
 
     destroy() {
         this.engine.destroy();
@@ -91,4 +91,13 @@ export class MapAPI {
 
     exportDrawnGeoJSON(opts?: DrawExportOptions) { return this.engine.exportDrawnGeoJSON(opts); }
     importDrawnGeoJSON(text: string, opts?: DrawImportOptions) { this.engine.importDrawnGeoJSON(text, opts); }
+
+    enterFullScreen() { this.engine.enterFullScreen(); }
+    leaveFullScreen() { this.engine.leaveFullScreen(); }
+    showScaleLine() { this.engine.showScaleLine(); }
+    hideScaleLine() { this.engine.hideScaleLine(); }
+
+    activateGeolocation(follow?: boolean) { this.engine.activateGeolocation(follow); }
+    deactivateGeolocation() { this.engine.deactivateGeolocation(); }
+    zoomToGeolocation(maxZoom?: number) { return this.engine.zoomToGeolocation(maxZoom); }
 }

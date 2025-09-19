@@ -3,6 +3,13 @@ import type { Extent } from 'ol/extent';
 export type MapCoord = [number, number];         // EPSG:3857 by default (configurable)
 export type DrawKind = 'Point' | 'LineString' | 'Polygon' | 'Circle' | 'Text';
 
+export interface ControlInit {
+    fullscreen?: boolean;       // show FullScreen button
+    scaleLine?: boolean;        // show ScaleLine
+    geolocation?: boolean;      // prepare geolocation plumbing
+    geolocationFollow?: boolean;// start in follow mode
+}
+
 export interface DrawStyleOptions {
     strokeColor?: string;
     strokeWidth?: number;
@@ -42,7 +49,7 @@ export interface MapInit {
     enableDefaults?: boolean;    // default controls/interactions
     minZoom?: number;
     maxZoom?: number;
-
+    controls?: ControlInit;
 }
 
 export interface XYZDefOptions {

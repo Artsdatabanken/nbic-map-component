@@ -21,6 +21,8 @@ export const MapConfigSchema = z.object({
     controls: z.object({
         zoom: z.boolean().optional(),
         scaleBar: z.boolean().optional(),
+        scaleLine: z.boolean().optional(),
+        geolocation: z.boolean().optional(),
         attribution: z.boolean().optional(),
         rotate: z.boolean().optional(),
         fullscreen: z.boolean().optional(),

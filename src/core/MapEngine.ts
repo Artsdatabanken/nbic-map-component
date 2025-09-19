@@ -32,6 +32,16 @@ export interface MapEngine {
 
     exportDrawnGeoJSON(opts?: DrawExportOptions): string;
     importDrawnGeoJSON(geojson: string, opts?: DrawImportOptions): void;
+
+    enterFullScreen(): void;
+    leaveFullScreen(): void;
+    showScaleLine(): void;
+    hideScaleLine(): void;
+
+    // Geolocation
+    activateGeolocation(follow?: boolean): void;
+    deactivateGeolocation(): void;
+    zoomToGeolocation(maxZoom?: number): Promise<boolean>;
 }
 
 export type MapEngineFactory = (events: Emitter<MapEventMap>) => MapEngine;

@@ -13,6 +13,7 @@ export function createMap(target: string | HTMLElement, rawConfig: unknown) {
         zoom: cfg.zoom,
         minZoom: cfg.minZoom,
         maxZoom: cfg.maxZoom,
+        controls: cfg.controls,
     });
 
     // apply the rest (sources/layers/etc.)

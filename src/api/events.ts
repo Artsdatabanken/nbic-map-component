@@ -26,6 +26,10 @@ export type MapEventMap = {
     'draw:imported': { count: number };
     'draw:cleared': { count: number };
     'edit:modified': { count: number };
+    'geo:position': { coordinate: MapCoord; accuracy?: number } | null;
+    'geo:error': { message: string };
+    'fullscreen:change': { active: boolean };
+    'controls:scaleline': { visible: boolean };
     error: { scope: string; message: string; detail?: unknown };
 };
 

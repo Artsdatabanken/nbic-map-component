@@ -22,6 +22,9 @@ export function initMapFromConfig(map: MapAPI, rawJson: unknown) {
         SourceRegistry.register(w.id, () => ({ type: 'wfs', options: w as WFSDefOptions }))
     );
 
+    console.log('Config loaded, applying to map:', cfg);
+    // cfg.controls?.zoom && map.addControl('zoom');
+
     // Add layers if provided
     cfg.layers?.forEach(layer => {
         // Build SourceInput (either {ref} or inline def)
