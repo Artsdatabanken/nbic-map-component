@@ -16,8 +16,7 @@ export const MapConfigSchema = z.object({
     maxZoom: z.number(),
 
     size: z.enum(['Large', 'Small'] as const).optional(),
-    tabIndex: z.number().int().optional(),
-
+    tabIndex: z.number().int().optional(),    
     controls: z.object({
         zoom: z.boolean().optional(),
         scaleBar: z.boolean().optional(),

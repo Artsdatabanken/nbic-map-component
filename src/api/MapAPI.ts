@@ -96,6 +96,11 @@ export class MapAPI {
     leaveFullScreen() { this.engine.leaveFullScreen(); }
     showScaleLine() { this.engine.showScaleLine(); }
     hideScaleLine() { this.engine.hideScaleLine(); }
+    showZoomControl() { this.engine.showZoomControl(); }
+    hideZoomControl() { this.engine.hideZoomControl(); }
+
+    showAttribution() { this.engine.showAttribution(); }
+    hideAttribution() { this.engine.hideAttribution(); }
 
     activateGeolocation(follow?: boolean) { this.engine.activateGeolocation(follow); }
     deactivateGeolocation() { this.engine.deactivateGeolocation(); }

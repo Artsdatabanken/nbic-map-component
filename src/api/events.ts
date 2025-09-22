@@ -30,6 +30,8 @@ export type MapEventMap = {
     'geo:error': { message: string };
     'fullscreen:change': { active: boolean };
     'controls:scaleline': { visible: boolean };
+    'controls:zoom': { visible: boolean };
+    'controls:attribution': { visible: boolean };
     error: { scope: string; message: string; detail?: unknown };
 };
 

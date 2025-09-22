@@ -32,6 +32,10 @@ import Geolocation from 'ol/Geolocation';
 
 import { Circle as CircleGeom, Point } from 'ol/geom';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
+import Zoom from 'ol/control/Zoom';
+import Collection from 'ol/Collection';
+import type Control from 'ol/control/Control';
+import Attribution from 'ol/control/Attribution';
 
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
@@ -53,12 +57,45 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     // Controls
     let ctrlFull: FullScreen | null = null;
     let ctrlScale: ScaleLine | null = null;
+    let ctrlZoom: Zoom | null = null;
+    let ctrlAttribution: Attribution | null = null;
 
     // Geolocation
     let geo: Geolocation | null = null;
     let geoLayer: VectorLayer<VectorSource> | null = null;
     let geoSource: VectorSource | null = null;
     let geoFollow = false;
+
+    function ensureZoom() {
+        if (!map || ctrlZoom) return;
+        ctrlZoom = new Zoom();              // You can pass options here (duration, className, target)
+        map.addControl(ctrlZoom);
+        events.emit('controls:zoom', { visible: true });
+    }
+
+    function removeZoom() {        
+        if (!map || !ctrlZoom) return;
+        map.removeControl(ctrlZoom);
+        ctrlZoom = null;
+        events.emit('controls:zoom', { visible: false });
+    }
+
+    function ensureAttribution() {
+        if (!map || ctrlAttribution) return;
+        ctrlAttribution = new Attribution({
+            collapsible: true,          // set to false if you always want it visible
+            collapsed: false,           // start expanded if you prefer
+        });
+        map.addControl(ctrlAttribution);
+        events.emit('controls:attribution', { visible: true });
+    }
+
+    function removeAttribution() {
+        if (!map || !ctrlAttribution) return;
+        map.removeControl(ctrlAttribution);
+        ctrlAttribution = null;
+        events.emit('controls:attribution', { visible: false });
+    }
 
     function ensureScaleLine() {
         if (!map || ctrlScale) return;
@@ -236,13 +273,15 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             map = new OlMap({
                 target: init.target,
                 view,
-                controls: undefined,        // add defaults later if needed
+                controls: new Collection<Control>([]),
                 interactions: undefined,
             });
 
             // Controls requested at init
             if (init.controls?.fullscreen) ensureFullScreen();
             if (init.controls?.scaleLine) ensureScaleLine();
+            if (init.controls?.zoom) ensureZoom();
+            if (init.controls?.attribution) ensureAttribution();
             if (init.controls?.geolocation) {
                 ensureGeo();
                 if (init.controls?.geolocationFollow) {
@@ -566,6 +605,12 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
 
         showScaleLine() { ensureScaleLine(); },
         hideScaleLine() { removeScaleLine(); },
+
+        showZoomControl() { ensureZoom(); },
+        hideZoomControl() { removeZoom(); },
+
+        showAttribution() { ensureAttribution(); },
+        hideAttribution() { removeAttribution(); },
 
         activateGeolocation(follow?: boolean) {
             if (!map) return;

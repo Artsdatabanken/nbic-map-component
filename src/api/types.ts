@@ -8,6 +8,8 @@ export interface ControlInit {
     scaleLine?: boolean;        // show ScaleLine
     geolocation?: boolean;      // prepare geolocation plumbing
     geolocationFollow?: boolean;// start in follow mode
+    zoom?: boolean;
+    attribution?: boolean;     // show attribution control
 }
 
 export interface DrawStyleOptions {

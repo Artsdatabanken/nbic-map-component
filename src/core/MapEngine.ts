@@ -38,6 +38,12 @@ export interface MapEngine {
     showScaleLine(): void;
     hideScaleLine(): void;
 
+    showZoomControl(): void;
+    hideZoomControl(): void;
+
+    showAttribution(): void;
+    hideAttribution(): void;
+
     // Geolocation
     activateGeolocation(follow?: boolean): void;
     deactivateGeolocation(): void;

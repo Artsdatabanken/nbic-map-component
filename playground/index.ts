@@ -29,7 +29,7 @@ const map = createMap('map', {
     zoom: 11,
     minZoom: 0,
     maxZoom: 18,
-    controls: { scaleLine: true, fullscreen: true, geolocation: true },
+    controls: { scaleLine: true, fullscreen: true, geolocation: true, zoom: true, attribution: true },
 });
 
 map.addLayer({
@@ -48,10 +48,10 @@ map.addLayer({
             format: 'image/png',
             style: 'default',
             wrapX: false,                   // UTM – usually false
-            opacity: 1,
-
-        },
-    },
+            opacity: 1,            
+            attribution: '© Kartverket'
+        },        
+    },    
     visible: true
 });
 
@@ -87,7 +87,7 @@ map.addLayer({
 });
 
 map.addLayer({
-    id: 'kommune',
+    id: 'fylker',
     kind: 'vector',
     visible: true,
     base: false,
@@ -96,10 +96,10 @@ map.addLayer({
         options: {
             url: 'https://wfs.geonorge.no/skwms1/wfs.administrative_enheter',
             outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
-            typeName: 'app:Kommune',
+            typeName: 'app:Fylke',
             srsName: 'EPSG:25833',
             minZoomToLoad: 5,
-            strategy: 'bbox',
+            strategy: 'bbox',            
         },
     },
     maxZoom: 18,
