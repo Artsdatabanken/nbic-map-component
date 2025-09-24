@@ -115,22 +115,23 @@ map.addLayer({
     style: { type: 'simple', options: { strokeColor: '#3399FF', strokeWidth: 2, fillColor: 'rgba(46, 46, 46, 0.1)' } },
 })
 
-// map.addLayer({
-//     id: 'markers',
-//     kind: 'vector',
-//     source: { type: 'memory' },
-//     // style: {ref: 'markers'},
-//     style: { type: 'simple', options: { circle: { radius: 6, fillColor: '#007aff', strokeColor: '#fff', strokeWidth: 2 } } },
-//     zIndex: 5000
-// });
+map.addLayer({
+    id: 'markers',
+    kind: 'vector',
+    source: { type: 'memory' },
+    // style: {ref: 'markers'},
+    // style: { type: 'simple', options: { circle: { radius: 6, fillColor: '#007aff', strokeColor: '#fff', strokeWidth: 2 } } },
+    zIndex: 5000
+});
 
-// map.addPoint('markers', [385056, 7155942],
-//     { text: 'Danger' }, 
-//     { 
-//         fillColor: '#ff3b30', strokeColor: '#fff', strokeWidth: 3, pointRadius: 8, 
-//         text: { label: 'Danger' } 
-//     }
-// );
+map.addPoint('markers', [385056, 7155942],
+    { text: 'Danger' }, 
+    { 
+        // fillColor: '#ff3b30', strokeColor: '#fff', strokeWidth: 3, pointRadius: 8, 
+        text: { label: 'DangerX', font: 'bold 16px sans-serif', fillColor: '#fff', strokeColor: '#000', strokeWidth: 3, offsetY: -20 } 
+        // text: { label: 'location_pin', font: 'normal normal 400 30px "Material Icons"', fillColor: 'red', strokeColor: '#000', strokeWidth: 3, offsetY: -20 }
+    }
+);
 
 map.on('pointer:click', (event) => {
     console.log('Map clickedA:', event);

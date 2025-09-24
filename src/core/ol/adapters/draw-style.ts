@@ -15,11 +15,16 @@ export function makeDrawStyle(opts: DrawStyleOptions | undefined): Style {
         fill,
         stroke,
     });
-
-    const s = new Style({ stroke, fill, image });
+    const s = new Style();
+    if (!opts?.text) {
+        s.setImage(image);
+        s.setFill(fill);
+        s.setStroke(stroke);
+    }
+    
 
     // Text label (optional)
-    if (opts?.text) {
+    if (opts?.text) {        
         s.setText(
             new Text({
                 text: opts.text.label ?? '',
@@ -34,7 +39,7 @@ export function makeDrawStyle(opts: DrawStyleOptions | undefined): Style {
                 offsetX: opts.text.offsetX ?? 0,
                 offsetY: opts.text.offsetY ?? 0,
             })
-        );
+        );        
     }
 
     return s;

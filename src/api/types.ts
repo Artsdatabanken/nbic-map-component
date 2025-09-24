@@ -26,6 +26,12 @@ export interface DrawStyleOptions {
         offsetX?: number;
         offsetY?: number;
     };
+    // icon?: {
+    //     materialIconName: string; // e.g. 'place', 'star', 'circle'
+    //     size?: number;            // in px, default 24
+    //     color?: string;          // CSS color, default black
+    //     rotation?: number;       // degrees clockwise, default 0
+    // }
 }
 
 export interface DrawOptions {
