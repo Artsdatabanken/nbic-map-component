@@ -64,6 +64,14 @@ map.addLayer({
 })
 
 map.addLayer({
+    id: "eiendom",
+    kind: "vector",
+    visible: true,
+    source: { type: "geojson", options: { url: 'https://api.kartverket.no/eiendom/v1/geokoding?matrikkelnummer=5006-290%2F15&omrade=true&utkoordsys=25833' } },
+    // you can’t encode a function in JSON; apply style later imperatively
+})
+
+map.addLayer({
     id: 'ar50',
     kind: 'vector',
     visible: false,
@@ -107,9 +115,26 @@ map.addLayer({
     style: { type: 'simple', options: { strokeColor: '#3399FF', strokeWidth: 2, fillColor: 'rgba(46, 46, 46, 0.1)' } },
 })
 
-// map.on('pointer:click', (event) => {
-//     console.log('Map clickedA:', event);
+// map.addLayer({
+//     id: 'markers',
+//     kind: 'vector',
+//     source: { type: 'memory' },
+//     // style: {ref: 'markers'},
+//     style: { type: 'simple', options: { circle: { radius: 6, fillColor: '#007aff', strokeColor: '#fff', strokeWidth: 2 } } },
+//     zIndex: 5000
 // });
+
+// map.addPoint('markers', [385056, 7155942],
+//     { text: 'Danger' }, 
+//     { 
+//         fillColor: '#ff3b30', strokeColor: '#fff', strokeWidth: 3, pointRadius: 8, 
+//         text: { label: 'Danger' } 
+//     }
+// );
+
+map.on('pointer:click', (event) => {
+    console.log('Map clickedA:', event);
+});
 
 declare global {
     interface Window {

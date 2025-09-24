@@ -189,7 +189,8 @@ export type SourceDef =
     | { type: 'xyz'; options: XYZDefOptions }
     | { type: 'wmts'; options: WMTSDefOptions }
     | { type: 'wfs'; options: WFSDefOptions }
-    | { type: 'geojson'; options: GeoJSONDefOptions };
+    | { type: 'geojson'; options: GeoJSONDefOptions }
+    | { type: 'memory' };
     // add more later:
     // | { type: 'wfs'; options: WFSDefOptions }
     // | { type: 'ref'; id: string }

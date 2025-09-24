@@ -649,6 +649,32 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                 };
                 geo!.on('change:position', once);
             });
-        }
+        },
+
+        getVectorLayerSource(layerId: string): VectorSource<Feature<Geometry>> | null {
+            const l = layerIndex.get(layerId) as VectorLayer<VectorSource<Feature<Geometry>>> | undefined;
+            if (!l || typeof l.getSource !== 'function') return null;
+            return l.getSource() as VectorSource<Feature<Geometry>> | null;
+        },
+
+        addPoint(layerId: string, coordinate: MapCoord, props?: Record<string, unknown>, style?: DrawStyleOptions) {
+            const src = this.getVectorLayerSource(layerId);
+            if (!src) return false;
+            const f = new Feature({ geometry: new Point(coordinate) });
+            if (props) for (const [k, v] of Object.entries(props)) f.set(k, v);
+            if (style) {
+                f.set('nbic:style', style);
+                f.setStyle(makeDrawStyle(style));
+            }
+            src.addFeature(f);
+            return true;
+        },
+
+        removeAllFromLayer(layerId: string) {
+            const src = this.getVectorLayerSource(layerId);
+            if (!src) return false;
+            src.clear(true);
+            return true;
+        },
     };
 }

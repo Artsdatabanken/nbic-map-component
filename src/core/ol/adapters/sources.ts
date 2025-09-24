@@ -109,6 +109,12 @@ export function toOlSource(def: SourceDef): OlSource {
 
             return createWfsVectorSource(o, viewProj);
         }
+
+        case 'memory': {
+            // empty, in-memory vector source for markers/graphics
+            return new VectorSource<Feature>();
+        }
+        
         default: {
             const type = (def as { type?: string }).type;
             throw new Error(`Unknown source type: ${type}`);

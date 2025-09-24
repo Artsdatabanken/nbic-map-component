@@ -1,8 +1,11 @@
 // src/core/MapEngine.ts
-import type { MapInit, MapCoord, CameraState, LayerDef, HitResult, HoverInfoOptions, DrawImportOptions, DrawExportOptions, DrawOptions } from '../api/types';
+import type { MapInit, MapCoord, CameraState, LayerDef, HitResult, HoverInfoOptions, DrawImportOptions, DrawExportOptions, DrawOptions, DrawStyleOptions } from '../api/types';
 import type { MapEventMap } from '../api/events';
 import type { Emitter } from '../core/state/store';
 import type { Extent } from 'ol/extent';
+import VectorSource from 'ol/source/Vector';
+import { Feature } from 'ol';
+import type { Geometry } from 'ol/geom';
 
 export interface MapEngine {
     init(init: MapInit): Promise<void>;
@@ -46,8 +49,12 @@ export interface MapEngine {
 
     // Geolocation
     activateGeolocation(follow?: boolean): void;
-    deactivateGeolocation(): void;
+    deactivateGeolocation(): void;  
     zoomToGeolocation(maxZoom?: number): Promise<boolean>;
+
+    getVectorLayerSource(layerId: string): VectorSource<Feature<Geometry>> | null;
+    addPoint(layerId: string, coord: MapCoord, properties?: Record<string, unknown>, style?: DrawStyleOptions): boolean;
+    removeAllFromLayer(layerId: string): boolean;
 }
 
 export type MapEngineFactory = (events: Emitter<MapEventMap>) => MapEngine;
