@@ -1,5 +1,5 @@
 // src/core/ol/adapters/sources.ts
-import type { SourceDef, SourceInput, WMTSDefOptions, XYZDefOptions, WFSDefOptions } from '../../../api/types';
+import type { SourceDef, SourceInput, WMTSDefOptions, XYZDefOptions, WFSDefOptions, GeoJSONDefOptions } from '../../../api/types';
 import OSM from 'ol/source/OSM';
 import XYZ from 'ol/source/XYZ';
 import WMTS from 'ol/source/WMTS';
@@ -12,6 +12,7 @@ import { get as getProjection } from 'ol/proj';
 import { makeGridFromExtent } from './wmts-grid';
 import { createWfsVectorSource } from './wfs-loader';
 import {mapBounds } from '../../projections';
+import type { Geometry } from 'ol/geom';
 // import TileLayer from 'ol/layer/Tile';
 // import { getWidth } from 'ol/extent';
 
@@ -93,11 +94,26 @@ export function toOlSource(def: SourceDef): OlSource {
         }
 
         case 'geojson': {
-            const { url } = def.options;            
-            return new VectorSource({
-                url,
-                format: new GeoJSON(),  // always reproject to view projection
-            });
+            const opts = def.options as GeoJSONDefOptions;
+
+            // Inline string (opts.text) → create an empty source and inject features
+            if (opts.text && opts.text.trim().length) {
+                const fmt = new GeoJSON({ dataProjection: opts.dataProjection });
+                const features = fmt.readFeatures(opts.text);
+                const src = new VectorSource<Feature<Geometry>>();
+                if (features.length) src.addFeatures(features);
+                return src;
+            }
+
+            // URL → let OL load for us
+            if (opts.url) {
+                return new VectorSource<Feature<Geometry>>({
+                    url: opts.url,
+                    format: new GeoJSON({ dataProjection: opts.dataProjection }),
+                });
+            }
+
+            throw new Error('geojson source: provide either options.url or options.text');
         }
 
         case 'wfs': {

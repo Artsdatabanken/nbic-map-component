@@ -186,7 +186,11 @@ export interface XYZDefOptions {
 // }
 
 export interface GeoJSONDefOptions {
-    url: string;
+    url?: string;
+    /** Inline GeoJSON string (Feature or FeatureCollection) */
+    text?: string;
+    /** CRS of the GeoJSON data if different from the map (no reprojection if omitted) */
+    dataProjection?: string;
     // (optional) add more later: dataProjection?, strategy?, loader?, etc.
 }
 
