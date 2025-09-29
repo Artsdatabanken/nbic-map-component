@@ -137,6 +137,15 @@ export interface SimpleStyleOptions {
         strokeColor?: string;
         strokeWidth?: number;
     };
+    text?: {
+        label?: string;         // used for “Text” draw; default empty (you can set later)
+        font?: string;          // e.g. '14px Inter'
+        fillColor?: string;     // text fill
+        strokeColor?: string;   // text halo
+        strokeWidth?: number;
+        offsetX?: number;
+        offsetY?: number;
+    };
 }
 
 
@@ -223,6 +232,12 @@ export interface LayerDef {
     background?: string;
     minZoom?: number;
     maxZoom?: number;
+    cluster?: {
+        enabled: boolean;
+        distance?: number;      // px distance between points
+        minDistance?: number;   // minimum distance
+        style?: StyleDef;       // cluster style (circle + text etc.)
+    };
 }
 
 export interface HoverInfoOptions {
