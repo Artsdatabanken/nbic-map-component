@@ -200,6 +200,8 @@ export interface GeoJSONDefOptions {
     text?: string;
     /** CRS of the GeoJSON data if different from the map (no reprojection if omitted) */
     dataProjection?: string;
+    // default featureProjection is map projection (EPSG:3857)
+    featureProjection?: string;
     // (optional) add more later: dataProjection?, strategy?, loader?, etc.
 }
 
@@ -247,4 +249,9 @@ export interface HoverInfoOptions {
     outlineColor?: string;
     /** Outline width in px. Default: 3 */
     outlineWidth?: number;
+}
+
+export interface InsertGeomOptions {
+    /** CRS of the incoming coordinates. If omitted, assume map/view projection. */
+    dataProjection?: string; // e.g. 'EPSG:4326' or 'EPSG:25833'
 }

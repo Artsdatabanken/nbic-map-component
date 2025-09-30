@@ -24,36 +24,41 @@ const map = createMap('map', {
     target: 'map',
     id: 'demo',
     version: 1,
-    projection: 'EPSG:25833',          // View must match WMTS projection
-    center: [385056, 7155942], //[338210.0020499135, 7108618.769365374],//[385056, 7155942],       // pick a reasonable center in EPSG:25833
-    zoom: 10,
+    projection: 'EPSG:3857',          // View must match WMTS projection
+    center: [
+        1712134.7297984553, 9680702.807509549],//[385056, 7155942], //[338210.0020499135, 7108618.769365374],//[385056, 7155942],       // pick a reasonable center in EPSG:25833
+    zoom: 6,
     minZoom: 0,
     maxZoom: 18,
     controls: { scaleLine: true, fullscreen: true, geolocation: true, zoom: true, attribution: true },
 });
 
-map.addLayer({
-    id: 'topografisk',
-    kind: 'tile',
-    base: true,
-    source: {
-        type: 'wmts',
-        options: {
-            url: 'https://cache.kartverket.no/v1/service',
-            layer: 'topo',
-            matrixSet: 'utm33n',            // Kartverket matrix set id
-            projection: 'EPSG:25833',   
-            tileSize: 256,
-            levels: 18,                     // or resolutions if Kartverket documents them
-            format: 'image/png',
-            style: 'default',
-            wrapX: false,                   // UTM – usually false
-            opacity: 1,            
-            attribution: '© Kartverket'
-        },        
-    },    
-    visible: true
-});
+map.addLayer(
+    { id: 'basemap', kind: 'tile', source: { type: 'osm' }, visible: true, base: true }
+)
+
+// map.addLayer({
+//     id: 'topografisk',
+//     kind: 'tile',
+//     base: true,
+//     source: {
+//         type: 'wmts',
+//         options: {
+//             url: 'https://cache.kartverket.no/v1/service',
+//             layer: 'topo',
+//             matrixSet: 'utm33n',            // Kartverket matrix set id
+//             projection: 'EPSG:25833',   
+//             tileSize: 256,
+//             levels: 18,                     // or resolutions if Kartverket documents them
+//             format: 'image/png',
+//             style: 'default',
+//             wrapX: false,                   // UTM – usually false
+//             opacity: 1,            
+//             attribution: '© Kartverket'
+//         },        
+//     },    
+//     visible: true
+// });
 
 map.addLayer({
     id: "eco",
@@ -67,32 +72,32 @@ map.addLayer({
     id: "eiendom",
     kind: "vector",
     visible: true,
-    source: { type: "geojson", options: { dataProjection: 'EPSG:25833', url: 'https://api.kartverket.no/eiendom/v1/geokoding?matrikkelnummer=5006-290%2F15&omrade=true&utkoordsys=25833' } },
+    source: { type: "geojson", options: { dataProjection: 'EPSG:25833', featureProjection: 'EPSG:3857', url: 'https://api.kartverket.no/eiendom/v1/geokoding?matrikkelnummer=5006-290%2F15&omrade=true&utkoordsys=25833' } },
     // you can’t encode a function in JSON; apply style later imperatively
 })
 
-map.addLayer({
-    id: 'ar50',
-    kind: 'vector',
-    visible: false,
-    base: false,
-    source: {
-        type: 'wfs',
-        options: {
-            url: 'https://wfs.nibio.no/cgi-bin/ar50_2',
-            typeName: 'ms:AR50',
-            version: '2.0.0',
-            srsName: 'EPSG:25833',
-            outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
-            strategy: 'bbox',
-            // maxFeatures: 5000,
-            minZoomToLoad: 14,            
-        },
-    },
-    maxZoom: 18,
-    minZoom: 8,
-    style: { type: 'simple', options: { strokeColor: '#9e7795', strokeWidth: 1 } },
-});
+// map.addLayer({
+//     id: 'ar50',
+//     kind: 'vector',
+//     visible: false,
+//     base: false,
+//     source: {
+//         type: 'wfs',
+//         options: {
+//             url: 'https://wfs.nibio.no/cgi-bin/ar50_2',
+//             typeName: 'ms:AR50',
+//             version: '2.0.0',
+//             srsName: 'EPSG:25833',
+//             outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
+//             strategy: 'bbox',
+//             // maxFeatures: 5000,
+//             minZoomToLoad: 14,            
+//         },
+//     },
+//     maxZoom: 18,
+//     minZoom: 8,
+//     style: { type: 'simple', options: { strokeColor: '#9e7795', strokeWidth: 1 } },
+// });
 
 map.addLayer({
     id: 'fylker',
@@ -105,7 +110,7 @@ map.addLayer({
             url: 'https://wfs.geonorge.no/skwms1/wfs.administrative_enheter',
             outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
             typeName: 'app:Fylke',
-            srsName: 'EPSG:25833',
+            srsName: 'EPSG:3857',
             minZoomToLoad: 5,
             strategy: 'bbox',            
         },
@@ -130,7 +135,8 @@ map.addPoint('markers', [385056, 7155942],
         // fillColor: '#ff3b30', strokeColor: '#fff', strokeWidth: 3, pointRadius: 8, 
         text: { label: 'DangerX', font: 'bold 16px sans-serif', fillColor: '#fff', strokeColor: '#000', strokeWidth: 3, offsetY: -20 } 
         // text: { label: 'location_pin', font: 'normal normal 400 30px "Material Icons"', fillColor: 'red', strokeColor: '#000', strokeWidth: 3, offsetY: -20 }
-    }
+    },
+    { dataProjection: 'EPSG:25833' }
 );
 
 
@@ -139,7 +145,7 @@ map.addLayer({
     id: 'geojson',
     kind: 'vector',
     visible: true,    
-    source: { type: 'geojson', options: { dataProjection: 'EPSG:25833', text: '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[382213.9958160136,7192693.298516899]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[379010.216936343,7194929.561227733]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385966.8490689363,7195614.040144959]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[380955.9861982096,7196607.205632699]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385085.8247894216,7197926.356068817]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7149304.194866324]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[404805.37905920955,7149328.949441544]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[409912.57599976804,7151959.794116425]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7153948.212827165]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[403836.96814668947,7156195.21246219]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}}]}'} },
+    source: { type: 'geojson', options: { dataProjection: 'EPSG:25833', featureProjection: 'EPSG:3857',  text: '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[382213.9958160136,7192693.298516899]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[379010.216936343,7194929.561227733]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385966.8490689363,7195614.040144959]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[380955.9861982096,7196607.205632699]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385085.8247894216,7197926.356068817]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7149304.194866324]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[404805.37905920955,7149328.949441544]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[409912.57599976804,7151959.794116425]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7153948.212827165]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[403836.96814668947,7156195.21246219]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}}]}'} },
     cluster: {
         enabled: true,
         distance: 50,

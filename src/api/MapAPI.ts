@@ -8,6 +8,7 @@ import type {
     DrawExportOptions,
     DrawOptions,
     DrawStyleOptions,
+    InsertGeomOptions,
 } from './types';
 import type { MapEngine } from '../core/MapEngine';
 import { createEmitter } from '../core/state/store';
@@ -77,7 +78,7 @@ export class MapAPI {
     setLayerVisibility(layerId: string, visible: boolean) { this.engine.setLayerVisibility(layerId, visible); }
     reorderLayers(order: string[]) { this.engine.reorderLayers(order); }
 
-    addPoint(layerId: string, coord: MapCoord, properties?: Record<string, unknown>, style?: DrawStyleOptions): boolean { return this.engine.addPoint(layerId, coord, properties, style); }
+    addPoint(layerId: string, coord: MapCoord, properties?: Record<string, unknown>, style?: DrawStyleOptions, opts?: InsertGeomOptions): boolean { return this.engine.addPoint(layerId, coord, properties, style, opts); }
     removeAllFromLayer(layerId: string): boolean { return this.engine.removeAllFromLayer(layerId); }
 
     activateHoverInfo(options?: HoverInfoOptions) { this.engine.activateHoverInfo(options); }

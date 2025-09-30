@@ -97,8 +97,8 @@ export function toOlSource(def: SourceDef): OlSource {
             const opts = def.options as GeoJSONDefOptions;
 
             // Inline string (opts.text) → create an empty source and inject features
-            if (opts.text && opts.text.trim().length) {
-                const fmt = new GeoJSON({ dataProjection: opts.dataProjection });
+            if (opts.text && opts.text.trim().length) {                
+                const fmt = new GeoJSON({ dataProjection: opts.dataProjection, featureProjection: opts.featureProjection });
                 const features = fmt.readFeatures(opts.text);
                 const src = new VectorSource<Feature<Geometry>>();
                 if (features.length) src.addFeatures(features);
@@ -106,10 +106,10 @@ export function toOlSource(def: SourceDef): OlSource {
             }
 
             // URL → let OL load for us
-            if (opts.url) {
+            if (opts.url) {                
                 return new VectorSource<Feature<Geometry>>({
                     url: opts.url,
-                    format: new GeoJSON({ dataProjection: opts.dataProjection }),
+                    format: new GeoJSON({ dataProjection: opts.dataProjection, featureProjection: opts.featureProjection }),
                 });
             }
 

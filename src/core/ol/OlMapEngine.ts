@@ -9,7 +9,8 @@ import type {
     MapCoord,
     CameraState,
     LayerDef,        
-    DrawStyleOptions
+    DrawStyleOptions,
+    InsertGeomOptions
 } from '../../api/types';
 import { Feature, View } from 'ol';
 import { toOlLayer } from './adapters/layers';
@@ -36,6 +37,7 @@ import Zoom from 'ol/control/Zoom';
 import Collection from 'ol/Collection';
 import type Control from 'ol/control/Control';
 import Attribution from 'ol/control/Attribution';
+import { transform } from 'ol/proj';
 
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
@@ -258,6 +260,12 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         const vis = (l as BaseLayer).getVisible?.();
         if (vis === false) return false;
         return true;
+    }
+
+    function toViewCoord(map: OlMap, coord: [number, number], from?: string): [number, number] {        
+        const viewProj = String(map.getView().getProjection().getCode());        
+        if (!from || from === viewProj) return coord;
+        return transform(coord, from, viewProj) as [number, number];
     }
 
     return {
@@ -657,10 +665,12 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             return l.getSource() as VectorSource<Feature<Geometry>> | null;
         },
 
-        addPoint(layerId: string, coordinate: MapCoord, props?: Record<string, unknown>, style?: DrawStyleOptions) {
+        addPoint(layerId: string, coordinate: MapCoord, props?: Record<string, unknown>, style?: DrawStyleOptions, opts?: InsertGeomOptions) {
+            if (!map) return false;
             const src = this.getVectorLayerSource(layerId);
             if (!src) return false;
-            const f = new Feature({ geometry: new Point(coordinate) });
+            const viewCoord = toViewCoord(map, coordinate, opts?.dataProjection);
+            const f = new Feature({ geometry: new Point(viewCoord) });
             if (props) for (const [k, v] of Object.entries(props)) f.set(k, v);
             if (style) {
                 f.set('nbic:style', style);
