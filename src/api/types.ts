@@ -230,7 +230,7 @@ export interface LayerDef {
     style?: StyleDef;
     visible?: boolean;
     zIndex?: number;
-    base?: boolean;
+    base?: boolean | 'super' | 'regional';
     background?: string;
     minZoom?: number;
     maxZoom?: number;

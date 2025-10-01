@@ -43,8 +43,15 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
     const layerIndex = new Map<string, BaseLayer>(); // <- this is the built-in Map<K,V>
     const baseIds = new Set<string>();
+    const superBaseIds = new Set<string>();   
+    const regionalBaseIds = new Set<string>();
+
     const BASE_BAND = -10000; // zIndex range for base layers (below overlays)
-    let activeBaseId: string | null = null;
+    const SUPER_BASE_BAND = -20000; // for special bases that must be below all bases
+    // let activeBaseId: string | null = null;
+    let activeRegionalBaseId: string | null = null;
+    let activeSuperBaseId: string | null = null; // optional, only if you later want to switch supers
+
     let hover: HoverInfoController | null = null;
     let drawSource: VectorSource<Feature<Geometry>> | null = null;
     let drawLayer: VectorLayer<VectorSource<Feature<Geometry>>> | null = null;
@@ -215,39 +222,77 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         if (snapInteraction) { map.removeInteraction(snapInteraction); snapInteraction = null; }
     }
 
-    function markLayer(l: BaseLayer, isBase: boolean) {
+    function markLayer(l: BaseLayer, isBase: boolean, role: 'super' | 'regional' | null) {
         l.set('nbic:role', isBase ? 'base' : 'overlay');
+        if (role) l.set('nbic:baseRole', role);
     }
     function isBaseLayer(l: BaseLayer) {
         return l.get('nbic:role') === 'base';
     }
-
-    function enforceBaseVisibility(chosenId?: string) {
-        // If a chosen base is made visible, hide all other base layers
-        if (!map) return;
-        if (chosenId && baseIds.has(chosenId)) {
-            for (const id of baseIds) {
-                const lyr = layerIndex.get(id);
-                if (!lyr) continue;
-                lyr.setVisible(id === chosenId);
-            }
-            activeBaseId = chosenId;
-            events.emit('layer:added', { layerId: chosenId }); // optional signal (or add a dedicated baselayer event)
-        } else {
-            // no chosen base; ensure at most one base visible (pick the first visible)
-            let firstVisible: string | null = null;
-            for (const id of baseIds) {
-                const lyr = layerIndex.get(id);
-                if (!lyr) continue;
-                if (lyr.getVisible() && firstVisible === null) {
-                    firstVisible = id;
-                } else {
-                    lyr.setVisible(false);
-                }
-            }
-            activeBaseId = firstVisible;
-        }
+    function baseRoleOf(l: BaseLayer): 'super' | 'regional' | undefined {
+        return l.get('nbic:baseRole');
     }
+
+    function enforceRegionalBaseVisibility(chosenId?: string) {
+        if (!map) return;
+        if (!chosenId || !regionalBaseIds.has(chosenId)) return;
+
+        for (const id of regionalBaseIds) {
+            const lyr = layerIndex.get(id);
+            if (!lyr) continue;
+            lyr.setVisible(id === chosenId);
+        }
+        activeRegionalBaseId = chosenId;
+    }
+
+    function ensureOnlyOneVisibleRegionalIfAny() {
+        // if none marked visible, pick the first and show only that
+        let first: string | null = null;
+        for (const id of regionalBaseIds) {
+            const l = layerIndex.get(id);
+            if (!l) continue;
+            if (l.getVisible() && !first) {
+                first = id;
+            } else {
+                l.setVisible(id === first);
+            }
+        }
+        activeRegionalBaseId = first;
+    }
+
+    function emitBaseChanged() {
+        events.emit('base:changed', {
+            regional: activeRegionalBaseId,
+            super: activeSuperBaseId            
+        });
+    }
+
+    // function enforceBaseVisibility(chosenId?: string) {
+    //     // If a chosen base is made visible, hide all other base layers
+    //     if (!map) return;
+    //     if (chosenId && baseIds.has(chosenId)) {
+    //         for (const id of baseIds) {
+    //             const lyr = layerIndex.get(id);
+    //             if (!lyr) continue;
+    //             lyr.setVisible(id === chosenId);
+    //         }
+    //         activeBaseId = chosenId;
+    //         events.emit('layer:added', { layerId: chosenId }); // optional signal (or add a dedicated baselayer event)
+    //     } else {
+    //         // no chosen base; ensure at most one base visible (pick the first visible)
+    //         let firstVisible: string | null = null;
+    //         for (const id of baseIds) {
+    //             const lyr = layerIndex.get(id);
+    //             if (!lyr) continue;
+    //             if (lyr.getVisible() && firstVisible === null) {
+    //                 firstVisible = id;
+    //             } else {
+    //                 lyr.setVisible(false);
+    //             }
+    //         }
+    //         activeBaseId = firstVisible;
+    //     }
+    // }
 
     function isPickableLayer(l: unknown): boolean {
         // guard null/undefined
@@ -354,7 +399,9 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             map = undefined;
             layerIndex.clear();
             baseIds.clear();
-            activeBaseId = null;
+            // activeBaseId = null;
+            activeRegionalBaseId = null;
+            activeSuperBaseId = null;
         },
 
         getCamera() {
@@ -386,26 +433,62 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             const layer = toOlLayer(def);
             layer.set('id', def.id);
             const isBase = !!def.base;
-            markLayer(layer, isBase);
+            // decide role            
+            const role: 'super' | 'regional' | null =
+                def.base === 'super' ? 'super' :
+                    def.base === 'regional' || def.base === true ? 'regional' :
+                        null;
+            markLayer(layer, isBase, role || null);
+
 
             map!.addLayer(layer);
             layerIndex.set(def.id, layer);
 
             if (isBase) {
+                // baseIds.add(def.id);
+                // // Put base layers in a low band; keep overlays >= 0
+                // // If caller provided zIndex, respect it; otherwise assign in band.
+                // if (def.zIndex === undefined) {
+                //     // simple stable ordering within base band
+                //     layer.setZIndex(BASE_BAND + layerIndex.size);
+                // }
+                // // If this base is visible, enforce exclusivity
+                // if (def.visible ?? layer.getVisible()) {
+                //     enforceBaseVisibility(def.id);
+                // } else {
+                //     // ensure not accidentally visible if another base is active
+                //     if (activeBaseId) layer.setVisible(false);
+                // }
+                // register into groups
                 baseIds.add(def.id);
-                // Put base layers in a low band; keep overlays >= 0
-                // If caller provided zIndex, respect it; otherwise assign in band.
+                if (role === 'super') superBaseIds.add(def.id);
+                if (role === 'regional') regionalBaseIds.add(def.id);
+
+                // z-index bands
                 if (def.zIndex === undefined) {
-                    // simple stable ordering within base band
-                    layer.setZIndex(BASE_BAND + layerIndex.size);
+                    if (role === 'super') {
+                        layer.setZIndex(SUPER_BASE_BAND + superBaseIds.size);
+                    } else {
+                        layer.setZIndex(BASE_BAND + regionalBaseIds.size);
+                    }
                 }
-                // If this base is visible, enforce exclusivity
-                if (def.visible ?? layer.getVisible()) {
-                    enforceBaseVisibility(def.id);
+
+                // initial visibility policy
+                if (role === 'super') {
+                    // keep as requested; if undefined, default to visible
+                    layer.setVisible(def.visible !== false);
+                    if (layer.getVisible()) activeSuperBaseId = def.id;
                 } else {
-                    // ensure not accidentally visible if another base is active
-                    if (activeBaseId) layer.setVisible(false);
+                    // regional → exclusive
+                    const wantsVisible = def.visible ?? layer.getVisible();
+                    if (wantsVisible) {
+                        enforceRegionalBaseVisibility(def.id);
+                    } else {
+                        // if something else already active, keep it; otherwise ensure one visible
+                        ensureOnlyOneVisibleRegionalIfAny();
+                    }
                 }
+                emitBaseChanged();
             } else {
                 // overlay default zIndex (respect provided zIndex)
                 if (def.zIndex !== undefined) layer.setZIndex(def.zIndex);
@@ -421,14 +504,42 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         },        
 
         setLayerVisibility(layerId: string, visible: boolean) {
+            // const l = layerIndex.get(layerId);
+            // if (!l) return;
+            // const isBase = isBaseLayer(l);
+            // if (isBase && visible) {
+            //     enforceBaseVisibility(layerId); // show this base, hide others
+            // } else {
+            //     l.setVisible(visible);
+            // }
             const l = layerIndex.get(layerId);
             if (!l) return;
-            const isBase = isBaseLayer(l);
-            if (isBase && visible) {
-                enforceBaseVisibility(layerId); // show this base, hide others
-            } else {
+            if (!isBaseLayer(l)) {
                 l.setVisible(visible);
+                return;
             }
+
+            const role = baseRoleOf(l);
+            if (role === 'super') {
+                // independent toggle
+                l.setVisible(visible);
+                if (visible) activeSuperBaseId = layerId;
+                return;
+            }
+
+            // regional → exclusive when turning on
+            if (visible) {
+                enforceRegionalBaseVisibility(layerId);
+            } else {
+                l.setVisible(false);
+                // keep at least one visible regional if any exist
+                ensureOnlyOneVisibleRegionalIfAny();
+            }
+        },
+
+        setActiveBase(layerId: string) {
+            if (!regionalBaseIds.has(layerId)) return;
+            enforceRegionalBaseVisibility(layerId);
         },
 
         reorderLayers(order: string[]) {

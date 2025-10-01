@@ -21,6 +21,7 @@ export interface MapEngine {
     removeLayer(layerId: string): void;    
     setLayerVisibility(layerId: string, visible: boolean): void;
     reorderLayers(order: string[]): void;
+    setActiveBase(layerId: string): void;
 
     pickAt(pixel: [number, number]): HitResult | null;
 

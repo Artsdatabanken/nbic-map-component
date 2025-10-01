@@ -32,6 +32,7 @@ export type MapEventMap = {
     'controls:scaleline': { visible: boolean };
     'controls:zoom': { visible: boolean };
     'controls:attribution': { visible: boolean };
+    'base:changed': { regional: string | null; super: string | null };
     error: { scope: string; message: string; detail?: unknown };
 };
 
@@ -45,6 +46,7 @@ export const MapEvents = {
     PointerMove: 'pointer:move',
     PointerClick: 'pointer:click',
     BaselayerChanged: 'baselayer:changed',
+    BaseChanged: 'base:changed',
     HoverInfo: 'hover:info',
     Error: 'error',
 } as const;

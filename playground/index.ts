@@ -34,31 +34,31 @@ const map = createMap('map', {
 });
 
 map.addLayer(
-    { id: 'basemap', kind: 'tile', source: { type: 'osm' }, visible: true, base: true }
-)
+    { id: 'basemap', base: 'super', kind: 'tile', source: { type: 'osm' }, visible: true }
+);
 
-// map.addLayer({
-//     id: 'topografisk',
-//     kind: 'tile',
-//     base: true,
-//     source: {
-//         type: 'wmts',
-//         options: {
-//             url: 'https://cache.kartverket.no/v1/service',
-//             layer: 'topo',
-//             matrixSet: 'utm33n',            // Kartverket matrix set id
-//             projection: 'EPSG:25833',   
-//             tileSize: 256,
-//             levels: 18,                     // or resolutions if Kartverket documents them
-//             format: 'image/png',
-//             style: 'default',
-//             wrapX: false,                   // UTM – usually false
-//             opacity: 1,            
-//             attribution: '© Kartverket'
-//         },        
-//     },    
-//     visible: true
-// });
+map.addLayer({
+    id: 'topografisk',
+    kind: 'tile',
+    base: 'regional',
+    source: {
+        type: 'wmts',
+        options: {
+            url: 'https://cache.kartverket.no/v1/service',
+            layer: 'topo',
+            matrixSet: 'utm33n',            // Kartverket matrix set id
+            projection: 'EPSG:25833',   
+            tileSize: 256,
+            levels: 18,                     // or resolutions if Kartverket documents them
+            format: 'image/png',
+            style: 'default',
+            wrapX: false,                   // UTM – usually false
+            opacity: 1,            
+            attribution: '© Kartverket'
+        },        
+    },    
+    visible: true
+});
 
 map.addLayer({
     id: "eco",
