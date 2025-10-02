@@ -240,7 +240,8 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         for (const id of regionalBaseIds) {
             const lyr = layerIndex.get(id);
             if (!lyr) continue;
-            lyr.setVisible(id === chosenId);
+            // lyr.setVisible(id === chosenId); // TODO: transition?
+            lyr.setVisible(true);
         }
         activeRegionalBaseId = chosenId;
     }

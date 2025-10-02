@@ -58,8 +58,8 @@ export function toOlLayer(
         case 'tile':
         case 'raster':
             if (src instanceof TileSource) {
-                // src is a TileSource
-                layer = new TileLayer({ source: src, visible: def.visible ?? true });
+                // src is a TileSource                
+                layer = new TileLayer({ source: src, visible: def.visible ?? true, opacity: def.opacity ?? 1 });
             } else {
                 throw new Error('Source for tile/raster layer must be a TileSource');
             }

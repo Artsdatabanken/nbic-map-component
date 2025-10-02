@@ -68,24 +68,53 @@ export interface XYZDefOptions {
     tileSize?: number;
 }
 
+// export interface WMTSDefOptions {
+//     url: string;
+//     layer: string;
+//     matrixSet: string;              // e.g. "utm33n" or "EPSG:25833"
+//     format?: string;
+//     style?: string;
+//     tileSize?: number;              // default 256    
+//     projection?: string;            // e.g. "EPSG:25833"
+//     extent?: Extent;                // full extent of the matrix set (map units)
+//     origin?: [number, number];      // top-left of extent (map units)
+//     levels?: number;                // how many zoom levels to generate if no resolutions given
+//     resolutions?: number[];         // explicit resolutions (map units / pixel)
+//     matrixIds?: string[];           // optional explicit matrix ids
+//     wrapX?: boolean;
+//     opacity?: number;
+//     customExtent?: Extent;
+//     attribution?: string;
+//     tileGrid?: unknown;
+// }
+
 export interface WMTSDefOptions {
     url: string;
     layer: string;
-    matrixSet: string;              // e.g. "utm33n" or "EPSG:25833"
-    format?: string;
-    style?: string;
-    tileSize?: number;              // default 256    
-    projection?: string;            // e.g. "EPSG:25833"
-    extent?: Extent;                // full extent of the matrix set (map units)
-    origin?: [number, number];      // top-left of extent (map units)
-    levels?: number;                // how many zoom levels to generate if no resolutions given
-    resolutions?: number[];         // explicit resolutions (map units / pixel)
-    matrixIds?: string[];           // optional explicit matrix ids
+    format?: string;              // e.g. 'image/png', 'image/jpgpng'
+    style?: string;               // default 'default'
+    matrixSet?: string;           // e.g. 'EPSG:25833' (classic)
+    /** When WMTS server uses non-EPSG matrix set ids (e.g. 'default028mm') */
+    matrixSetId?: string;         // raw string for tilematrixset param
+
+    projection?: string;          // e.g. 'EPSG:32633'
+    tileSize?: number;            // default 256
+    levels?: number;              // number of zoom levels
     wrapX?: boolean;
     opacity?: number;
-    customExtent?: Extent;
     attribution?: string;
-    tileGrid?: unknown;
+    extent?: Extent;          // full extent of the matrix set (map units)
+
+    /** Provide a full custom WMTS tile grid (overrides auto-build) */
+    // customTileGrid?: {
+    //     extent: [number, number, number, number];
+    //     origin?: [number, number];            // default top-left of extent
+    //     matrixIds?: (string | number)[];
+    //     resolutions?: number[];
+    // };
+
+    /** KVP URL param override hook (rarely needed) */
+    urlParamOverrides?: Record<string, string>;
 }
 
 // NEW: basic WFS option bag (implement later)
@@ -234,6 +263,7 @@ export interface LayerDef {
     background?: string;
     minZoom?: number;
     maxZoom?: number;
+    opacity?: number;
     cluster?: {
         enabled: boolean;
         distance?: number;      // px distance between points

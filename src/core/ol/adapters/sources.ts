@@ -8,11 +8,17 @@ import WMTS from 'ol/source/WMTS';
 import VectorSource from 'ol/source/Vector';
 import type { Feature } from 'ol';
 import GeoJSON from 'ol/format/GeoJSON';
-import { get as getProjection } from 'ol/proj';
+// import { get as getProjection } from 'ol/proj';
 import { makeGridFromExtent } from './wmts-grid';
 import { createWfsVectorSource } from './wfs-loader';
 import {mapBounds } from '../../projections';
 import type { Geometry } from 'ol/geom';
+// import type { Projection } from 'ol/proj';
+import { get as getProj } from 'ol/proj';
+import WMTSTileGrid from 'ol/tilegrid/WMTS';
+import { getTopLeft, getWidth, Extent } from 'ol/extent';
+import { wmtsPreset, WMTSPresetKey } from './wmts-presets';
+
 // import TileLayer from 'ol/layer/Tile';
 // import { getWidth } from 'ol/extent';
 
@@ -52,45 +58,97 @@ export function toOlSource(def: SourceDef): OlSource {
             });
         }
 
-        case 'wmts': {           
+        case 'wmts': {                      
             const o = def.options as WMTSDefOptions;
+            const tileSize = o.tileSize ?? 256;
+            const levels = o.levels ?? 18;
 
-            // Resolve projection & extent
-            const proj = o.projection ? getProjection(o.projection) : undefined;
-            let extent = o.extent ?? (proj?.getExtent() as [number, number, number, number] | undefined);
+            let tileGrid: WMTSTileGrid | undefined;            
 
-            // Optional: fallback to known bounds if projection has none (mapBounds)
-            if (!extent && o.projection) {
-                const b = mapBounds.find(m => m.epsg === o.projection);
-                if (b) extent = b.extent as [number, number, number, number];
+            // 1) Svalbard/Jan Mayen preset (NP ‘default028mm’ matrix) – origin/res from matrixExtent
+            function buildGridFromPreset(
+                p: { matrixIds: string[]; extent?: Extent; matrixExtent?: Extent; layerExtent?: Extent },
+                tileSize: number,
+                levels: number
+            ) {
+                const matrixExtent = p.matrixExtent ?? p.extent!;
+                const layerExtent = p.layerExtent ?? p.extent!;
+                return new WMTSTileGrid({
+                    origin: getTopLeft(matrixExtent),
+                    resolutions: Array.from({ length: levels }, (_, z) =>
+                        (getWidth(matrixExtent) / tileSize) / Math.pow(2, z)
+                    ),
+                    matrixIds: p.matrixIds,
+                    tileSize,
+                    extent: layerExtent, // clip to visible data
+                });
+            }            
+
+            // Only try presets when the server expects the special ArcGIS set id
+            const wantsDefault028 =
+                o.matrixSetId === 'default028mm' || o.matrixSet === 'default028mm';
+
+            if (!tileGrid && wantsDefault028) {
+                // Map projection → preset key
+                const presetKeyByProj: Record<string, WMTSPresetKey> = {
+                    'EPSG:32633': 'npolar-svalbard-32633',
+                    'EPSG:25833': 'npolar-janmayen-25833',
+                };
+                const key = o.projection ? presetKeyByProj[o.projection] : undefined;
+
+                if (key) {
+                    const p = wmtsPreset(key);
+                    tileGrid = buildGridFromPreset(p, tileSize, levels);
+                }
+            }
+            // 3) Generic: derive grid from projection/layer extent (old behavior)
+            if (!tileGrid) {
+                const proj = o.projection ? getProj(o.projection) : undefined;
+
+                const extent: Extent | undefined =
+                    o.extent
+                    ?? (proj?.getExtent() as Extent | undefined)
+                    ?? (o.projection ? mapBounds.find(m => m.epsg === o.projection)?.extent as Extent | undefined : undefined);
+
+                if (!extent) {
+                    throw new Error(
+                        `WMTS ${o.layer}: missing projection extent; set options.extent or ensure projection is registered with an extent.`
+                    );
+                }
+                tileGrid = makeGridFromExtent(extent, tileSize, levels);
             }
 
-            if (!extent) {
-                throw new Error(
-                    `WMTS ${o.layer}: missing projection extent; set options.extent or ensure projection is registered with an extent.`
-                );
-            }
-            
-            const grid = makeGridFromExtent(extent, o.tileSize ?? 256, o.levels ?? 19);
-
-            // REST vs KVP – Kartverket product URLs end with /1.0.0/
-            const isRest = /\/1\.0\.0\/?$/.test(o.url);
+            // REST vs KVP detection (keep what worked for you before)
+            const isRest = /\/1\.0\.0\/?$/i.test(o.url) || /\/wmts\/1\.0\.0\//i.test(o.url);
             const baseUrl = o.url.replace(/\/?$/, '/');
 
-            return new WMTS({
+            const src = new WMTS({
                 layer: o.layer,
-                matrixSet: o.matrixSet,
+                matrixSet: o.matrixSetId ?? o.matrixSet ?? 'EPSG:3857',
                 format: o.format ?? 'image/png',
                 style: o.style ?? 'default',
-                tileGrid: grid,
-                wrapX: o.wrapX ?? false,      // UTM: usually false
+                tileGrid,
+                wrapX: o.wrapX ?? false,                // UTM usually false
                 transition: 0,
                 attributions: o.attribution,
-                ...(proj ? { projection: proj } : {}), // only include if defined
+                ...(o.projection ? { projection: getProj(o.projection)! } : {}),
                 ...(isRest
                     ? { urls: [baseUrl], requestEncoding: 'REST' as const }
                     : { url: o.url, requestEncoding: 'KVP' as const }),
+                crossOrigin: 'anonymous',
             });
+
+            // Optional param overrides (e.g., force tilematrixset)
+            if (o.urlParamOverrides && Object.keys(o.urlParamOverrides).length) {
+                const orig = src.getTileUrlFunction();
+                src.setTileUrlFunction((coord, pr, pj) => {
+                    const u = new URL(String(orig(coord, pr, pj)), window.location.origin);
+                    for (const [k, v] of Object.entries(o.urlParamOverrides!)) u.searchParams.set(k, v);
+                    return u.toString();
+                });
+            }
+
+            return src;
         }
 
         case 'geojson': {
