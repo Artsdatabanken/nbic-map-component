@@ -12,6 +12,46 @@ export interface ControlInit {
     attribution?: boolean;     // show attribution control
 }
 
+export type BufferUnits = 'meters' | 'kilometers' | 'miles' | 'feet';
+
+export type InteractiveBuffer =
+    | boolean
+    | ({
+        interactive?: boolean;     // true → pick distance on-map
+        distance?: number;         // used if not interactive
+        units?: BufferUnits;       // default 'meters'
+        steps?: number;            // default 48
+        style?: DrawStyleOptions;  // style for final buffer
+        replaceOriginal?: boolean; // default false
+        /** Line cap style for line buffers (turf): 'round' | 'flat' | 'square' */
+        cap?: 'round' | 'flat' | 'square';
+        /** Line join style for polygons (turf): 'round' | 'mitre' | 'bevel' */
+        join?: 'round' | 'mitre' | 'bevel';
+    });
+
+// export interface DrawBufferOptions {
+//     /** Buffer distance (in `units`) */
+//     distance: number;
+//     /** Units for the buffer distance (default 'meters') */
+//     units?: BufferUnits;
+//     /** Vertex density for the buffered ring (default 32) */
+//     steps?: number;
+//     /** Line cap style for line buffers (turf): 'round' | 'flat' | 'square' */
+//     cap?: 'round' | 'flat' | 'square';
+//     /** Line join style for polygons (turf): 'round' | 'mitre' | 'bevel' */
+//     join?: 'round' | 'mitre' | 'bevel';
+//     /** Style for the resulting buffer feature(s) */
+//     style?: DrawStyleOptions;
+//     /** If true, remove the original feature after buffering */
+//     replaceOriginal?: boolean;
+// }
+
+// export interface StartDrawingOptions {
+//     kind: 'Point' | 'LineString' | 'Polygon' | 'Circle' | 'Text';
+//     style?: DrawStyleOptions;
+//     snap?: boolean;
+//     buffer?: InteractiveBuffer;
+// }
 export interface DrawStyleOptions {
     strokeColor?: string;
     strokeWidth?: number;
@@ -38,6 +78,7 @@ export interface DrawOptions {
     kind: DrawKind;
     style?: DrawStyleOptions;
     snap?: boolean;           // default: true
+    buffer?: InteractiveBuffer;
 }
 
 export interface DrawExportOptions {

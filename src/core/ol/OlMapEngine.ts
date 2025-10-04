@@ -10,34 +10,35 @@ import type {
     CameraState,
     LayerDef,        
     DrawStyleOptions,
-    InsertGeomOptions
+    InsertGeomOptions,    
 } from '../../api/types';
 import { Feature, View } from 'ol';
 import { toOlLayer } from './adapters/layers';
 import { HoverInfoController } from './interactions/HoverInfo';
 import type { Extent } from 'ol/extent';
-import type { Geometry } from 'ol/geom';
 import VectorSource from 'ol/source/Vector';
 import VectorLayer from 'ol/layer/Vector';
 import Draw from 'ol/interaction/Draw';
 import Modify from 'ol/interaction/Modify';
 import Snap from 'ol/interaction/Snap';
 import GeoJSON from 'ol/format/GeoJSON';
-// import type { Geometry } from 'ol/geom';
-// import type Feature from 'ol/Feature';
 import { makeDrawStyle } from './adapters/draw-style';
-
 import FullScreen from 'ol/control/FullScreen';
 import ScaleLine from 'ol/control/ScaleLine';
 import Geolocation from 'ol/Geolocation';
-
-import { Circle as CircleGeom, Point } from 'ol/geom';
 import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
 import Zoom from 'ol/control/Zoom';
 import Collection from 'ol/Collection';
 import type Control from 'ol/control/Control';
 import Attribution from 'ol/control/Attribution';
 import { transform } from 'ol/proj';
+import CircleGeom from 'ol/geom/Circle';
+import Point from 'ol/geom/Point';
+import type { Geometry } from 'ol/geom';
+import type { EventsKey } from 'ol/events';
+import { unByKey } from 'ol/Observable';
+import type { Feature as GeoJSONFeature, Geometry as GeoJSONGeometry } from 'geojson';
+
 
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;                    // <- use the aliased OL Map
@@ -59,7 +60,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let drawInteraction: Draw | null = null;
     let modifyInteraction: Modify | null = null;
     let snapInteraction: Snap | null = null;
-    
+    const _fmt = new GeoJSON();
 
     let currentDrawStyle = makeDrawStyle(undefined);
 
@@ -73,7 +74,54 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let geo: Geolocation | null = null;
     let geoLayer: VectorLayer<VectorSource> | null = null;
     let geoSource: VectorSource | null = null;
-    let geoFollow = false;
+    let geoFollow = false;    
+
+    /** Buffer any OL Feature using Turf (returns a new Feature) */
+    async function turfBufferFeature(
+        map: OlMap,
+        feature: Feature<Geometry>,
+        opts: {
+            distance: number;
+            units?: 'meters' | 'kilometers' | 'miles' | 'feet';
+            steps?: number;
+            cap?: 'round' | 'flat' | 'square';
+            join?: 'round' | 'mitre' | 'bevel';
+        }
+    ): Promise<Feature<Geometry> | null> {
+        try {
+            // Lazy-load to avoid bundling Turf if you never use buffer
+            const { default: turfBuffer } = await import('@turf/buffer');
+
+            // IMPORTANT: write to WGS84 for Turf, then read back to view projection
+            const viewProj = String(map.getView().getProjection().getCode());
+            const gj: GeoJSONFeature<GeoJSONGeometry> = _fmt.writeFeatureObject(feature, {
+                dataProjection: 'EPSG:4326',
+                featureProjection: viewProj,
+            });
+
+            // Build ONLY the supported Turf options (use a local inline type to avoid referencing an external type)
+            const turfOpts = {
+                units: (opts.units as 'meters' | 'kilometers' | 'miles' | 'feet') ?? 'meters', // 'meters' is allowed by @turf
+                steps: opts.steps ?? 64,
+            };
+
+            // Call Turf buffer (no cap/join here)
+            const buffered = turfBuffer(gj, opts.distance, turfOpts);
+            // `buffered` is a Feature<Polygon|MultiPolygon> (or undefined on failure)
+            if (!buffered) return null;
+
+            // GeoJSON → OL
+            const out = _fmt.readFeature(
+                buffered as GeoJSONFeature<GeoJSONGeometry>,
+                { dataProjection: 'EPSG:4326', featureProjection: viewProj }
+            ) as Feature<Geometry>;
+
+            return out;
+        } catch (err) {
+            console.warn('Turf buffer failed or not available:', err);
+            return null;
+        }
+    }
 
     function ensureZoom() {
         if (!map || ctrlZoom) return;
@@ -216,6 +264,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     }
 
     function removeDrawInteractions() {
+        console.log('removeDrawInteractions');
         if (!map) return;
         if (drawInteraction) { map.removeInteraction(drawInteraction); drawInteraction = null; }
         if (modifyInteraction) { map.removeInteraction(modifyInteraction); modifyInteraction = null; }
@@ -266,34 +315,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             regional: activeRegionalBaseId,
             super: activeSuperBaseId            
         });
-    }
-
-    // function enforceBaseVisibility(chosenId?: string) {
-    //     // If a chosen base is made visible, hide all other base layers
-    //     if (!map) return;
-    //     if (chosenId && baseIds.has(chosenId)) {
-    //         for (const id of baseIds) {
-    //             const lyr = layerIndex.get(id);
-    //             if (!lyr) continue;
-    //             lyr.setVisible(id === chosenId);
-    //         }
-    //         activeBaseId = chosenId;
-    //         events.emit('layer:added', { layerId: chosenId }); // optional signal (or add a dedicated baselayer event)
-    //     } else {
-    //         // no chosen base; ensure at most one base visible (pick the first visible)
-    //         let firstVisible: string | null = null;
-    //         for (const id of baseIds) {
-    //             const lyr = layerIndex.get(id);
-    //             if (!lyr) continue;
-    //             if (lyr.getVisible() && firstVisible === null) {
-    //                 firstVisible = id;
-    //             } else {
-    //                 lyr.setVisible(false);
-    //             }
-    //         }
-    //         activeBaseId = firstVisible;
-    //     }
-    // }
+    }   
 
     function isPickableLayer(l: unknown): boolean {
         // guard null/undefined
@@ -622,13 +644,192 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                 events.emit('draw:start', { kind: opts.kind });
             });
 
-            drawInteraction.on('drawend', (e) => {
+            drawInteraction.on('drawend', async (e) => {
                 const f = e.feature as Feature<Geometry>;
                 const styleOptions = opts.style;
                 f.set('nbic:style', styleOptions);
                 f.setStyle(makeDrawStyle(styleOptions));
-                // Re-enable modify AFTER finishing the new feature
                 modifyInteraction?.setActive(true);
+
+                // ---- Interactive buffer (Point | LineString | Polygon) via Turf ----
+                const b = opts.buffer;                                
+                const wantsInteractive =
+                    !!b && (b === true || (typeof b === 'object' && b.interactive)) &&
+                    ['Point', 'LineString', 'Polygon'].includes(f.getGeometry()?.getType() || '');
+
+                if (wantsInteractive && map && drawSource) {
+                    const params = (b === true ? {} : b) as {
+                        steps?: number;
+                        style?: DrawStyleOptions;
+                        replaceOriginal?: boolean;
+                        cap?: 'round' | 'flat' | 'square';
+                        join?: 'round' | 'mitre' | 'bevel';
+                        units?: 'meters' | 'kilometers' | 'miles' | 'feet';
+                    };
+
+                    const g = f.getGeometry()!;
+                    const gType = g.getType();
+                    // const viewProj = String(map.getView().getProjection().getCode());
+                    const previewStyle =
+                        params.style ?? { strokeColor: '#0080ff', strokeWidth: 2, fillColor: 'rgba(0,128,255,0.12)' };
+
+                    let preview: Feature<Geometry> | null = null;
+                    let lastDist = 0;
+
+                    // small throttle so Turf isn’t called too often
+                    let lastRun = 0;
+                    const THROTTLE_MS = 90;
+
+                    // distance helper
+                    function distanceToGeometry(px: [number, number]): number {
+                        if (gType === 'Point') {
+                            const c = (g as Point).getCoordinates() as [number, number];
+                            const dx = px[0] - c[0];
+                            const dy = px[1] - c[1];
+                            return Math.sqrt(dx * dx + dy * dy); // map units (meters in your UTM/WebMercator setup)
+                        } else {
+                            const closest = g.getClosestPoint(px) as [number, number];
+                            const dx = px[0] - closest[0];
+                            const dy = px[1] - closest[1];
+                            return Math.sqrt(dx * dx + dy * dy);
+                        }
+                    }
+                    
+                    function detach() {
+                        if (moveKey) { unByKey(moveKey); moveKey = undefined; }
+                        // if (downKey) { unByKey(downKey); downKey = undefined; }
+                    }
+
+                    const finalize = async () => {
+                        // if (!primed) { primed = true; return; }
+
+                        // moveKey = map!.un('pointermove', moveHandler);
+                        detach();
+
+                        if (preview) {
+                            if (params.replaceOriginal) drawSource!.removeFeature(f);
+
+                            events.emit('buffer:created', {
+                                baseFeature: f,
+                                bufferFeature: preview,
+                                distance: lastDist,
+                                units: params.units ?? 'meters',
+                            });
+
+                            // Keep the preview as the final buffer (already styled)
+                            preview = null;
+                        }
+
+                        // restore interactions and exit draw mode
+                        // modifyInteraction?.setActive(true);
+                        // snapInteraction?.setActive?.(true);
+                        // drawInteraction?.setActive(true);
+                        this.stopDrawing();
+                    };
+
+                    // Pause edit interactions while picking
+                    modifyInteraction?.setActive(false);
+                    snapInteraction?.setActive?.(false);
+                    // drawInteraction?.setActive(false);                    
+
+                    let moveKey: EventsKey | undefined = map.on('pointermove', async(evt) => {
+                        const now = performance.now();
+                        if (now - lastRun < THROTTLE_MS) return;
+                        lastRun = now;
+
+                        const dist = distanceToGeometry(evt.coordinate as [number, number]);
+                        if (dist <= 0) return;
+                        lastDist = dist;
+
+                        const buffered = await turfBufferFeature(map!, f, {
+                            distance: dist,                         // map-unit meters → Turf “meters”
+                            units: params.units ?? 'meters',
+                            steps: params.steps ?? 64,
+                            cap: params.cap ?? 'round',
+                            join: params.join ?? 'round',
+                        });
+                        if (!buffered) return;
+
+                        // style + show the preview
+                        buffered.set('nbic:style', previewStyle);
+                        buffered.setStyle(makeDrawStyle(previewStyle));
+
+                        if (preview) drawSource!.removeFeature(preview);
+                        preview = buffered;
+                        drawSource!.addFeature(preview);
+                    });
+
+                    // Use singleclick to finalize; ignore the first one (the draw-end click)
+                    // setTimeout(() => map!.on('singleclick', finalize), 0);
+                    map.once('singleclick', (evt) => {
+                            // (optional) left button guard
+                            if (!map) return;
+                            if (evt.originalEvent && (evt.originalEvent as PointerEvent).button !== 0) {
+                                // if not left, wait for next left click
+                                map.once('singleclick', finalize);
+                                return;
+                            }
+                            finalize();
+                        });
+
+                    // ESC cancels preview and restores interactions
+                    const escHandler = (e: KeyboardEvent) => {
+                        if (e.key !== 'Escape') return;
+                        // map!.un('pointermove', moveHandler);
+                        detach();
+                        map!.un('singleclick', finalize);
+                        if (preview) { drawSource!.removeFeature(preview); preview = null; }
+                        window.removeEventListener('keydown', escHandler);
+                        modifyInteraction?.setActive(true);
+                        snapInteraction?.setActive?.(true);
+                        drawInteraction?.setActive(true);
+                    };
+                    window.addEventListener('keydown', escHandler);
+
+                    events.emit('buffer:interactive:start', { mode: gType });
+                    return; // stop normal flow; interactive finalizes on click
+                }
+
+                // ---- Non-interactive buffer ----
+                
+                const wantsNonInteractive =
+                    !!b && typeof b === 'object' && !b.interactive;
+
+                if (wantsNonInteractive && map && drawSource) {
+                    const g = f.getGeometry();
+                    const gt = g?.getType();
+
+                    if (gt === 'LineString' || gt === 'Polygon' || gt === 'Point') {
+                        const buffered = await turfBufferFeature(map, f, {
+                            distance: b.distance ?? 50,
+                            units: b.units ?? 'meters',
+                            steps: b.steps ?? 64,
+                            cap: b.cap ?? 'round',
+                            join: b.join ?? 'round',
+                        });
+
+                        if (buffered) {
+                            const finalStyle =
+                                b.style ??
+                                { strokeColor: '#0057ff', strokeWidth: 2, fillColor: 'rgba(0,87,255,0.16)' };
+
+                            buffered.set('nbic:style', finalStyle);
+                            buffered.setStyle(makeDrawStyle(finalStyle));
+                            drawSource.addFeature(buffered);
+                            this.stopDrawing();
+                            if (b.replaceOriginal) drawSource.removeFeature(f);
+
+                            events.emit('buffer:created', {
+                                baseFeature: f,
+                                bufferFeature: buffered,
+                                distance: b.distance ?? 0,
+                                units: b.units ?? 'meters',
+                            });
+                        }
+                    }
+                }
+
+                // normal end event
                 events.emit('draw:end', { feature: f });
             });
 

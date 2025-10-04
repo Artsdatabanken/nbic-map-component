@@ -4,6 +4,7 @@ import type Feature from 'ol/Feature';
 import type BaseLayer from 'ol/layer/Base';
 import type { Extent } from 'ol/extent';
 import type { Geometry } from 'ol/geom';
+import type { Type } from 'ol/geom/Geometry';
 
 export type MapEventMap = {
     ready: void;
@@ -33,6 +34,8 @@ export type MapEventMap = {
     'controls:zoom': { visible: boolean };
     'controls:attribution': { visible: boolean };
     'base:changed': { regional: string | null; super: string | null };
+    'buffer:created': { baseFeature: Feature<Geometry>, bufferFeature: Feature<Geometry>, distance: number, units: string };
+    'buffer:interactive:start': {mode: Type};
     error: { scope: string; message: string; detail?: unknown };
 };
 

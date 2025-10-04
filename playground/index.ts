@@ -53,8 +53,7 @@ map.addLayer({
             levels: 18,                     // or resolutions if Kartverket documents them
             format: 'image/png',
             style: 'default',
-            wrapX: false,                   // UTM – usually false
-            opacity: 1,            
+            wrapX: false,                   // UTM – usually false                    
             attribution: '© Kartverket'
         },        
     },    
@@ -66,7 +65,7 @@ map.addLayer({
     id: 'svalbard',
     kind: 'tile',
     base: 'regional',
-    visible: true,
+    visible: false,
     opacity: 1,
     source: {
         type: 'wmts',
@@ -77,7 +76,7 @@ map.addLayer({
             matrixSetId: 'default028mm',        // critical for ArcGIS service
             format: 'image/jpgpng',
             style: 'default',
-            wrapX: true,
+            wrapX: true,            
             // levels: 17,
             attribution: '© Kartverket / Norsk Polarinstitutt',                    
         },
@@ -88,7 +87,7 @@ map.addLayer({
     id: 'janmayen',
     kind: 'tile',
     base: 'regional',
-    visible: true,
+    visible: false,
     opacity: 1,
     source: {
         type: 'wmts',
@@ -177,15 +176,15 @@ map.addLayer({
     zIndex: 5000
 });
 
-map.addPoint('markers', [385056, 7155942],
-    { text: 'Danger' }, 
-    { 
-        // fillColor: '#ff3b30', strokeColor: '#fff', strokeWidth: 3, pointRadius: 8, 
-        text: { label: 'DangerX', font: 'bold 16px sans-serif', fillColor: '#fff', strokeColor: '#000', strokeWidth: 3, offsetY: -20 } 
-        // text: { label: 'location_pin', font: 'normal normal 400 30px "Material Icons"', fillColor: 'red', strokeColor: '#000', strokeWidth: 3, offsetY: -20 }
-    },
-    { dataProjection: 'EPSG:25833' }
-);
+// map.addPoint('markers', [385056, 7155942],
+//     { text: 'Danger' }, 
+//     { 
+//         // fillColor: '#ff3b30', strokeColor: '#fff', strokeWidth: 3, pointRadius: 8, 
+//         text: { label: 'DangerX', font: 'bold 16px sans-serif', fillColor: '#fff', strokeColor: '#000', strokeWidth: 3, offsetY: -20 } 
+//         // text: { label: 'location_pin', font: 'normal normal 400 30px "Material Icons"', fillColor: 'red', strokeColor: '#000', strokeWidth: 3, offsetY: -20 }
+//     },
+//     { dataProjection: 'EPSG:25833' }
+// );
 
 
 // GEOJSON with clustering
@@ -207,9 +206,9 @@ map.addLayer({
     },
 })
 
-map.on('pointer:click', (event) => {
-    console.log('Map clickedA:', event);
-});
+// map.on('pointer:click', (event) => {
+//     console.log('Map clickedA:', event);
+// });
 
 declare global {
     interface Window {
