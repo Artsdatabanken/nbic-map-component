@@ -16,325 +16,29 @@ import { Feature, View } from 'ol';
 import { toOlLayer } from './adapters/layers';
 import { HoverInfoController } from './interactions/HoverInfo';
 import type { Extent } from 'ol/extent';
-import VectorSource from 'ol/source/Vector';
-import VectorLayer from 'ol/layer/Vector';
-import Draw from 'ol/interaction/Draw';
-import Modify from 'ol/interaction/Modify';
-import Snap from 'ol/interaction/Snap';
-import GeoJSON from 'ol/format/GeoJSON';
-import { makeDrawStyle } from './adapters/draw-style';
-import FullScreen from 'ol/control/FullScreen';
-import ScaleLine from 'ol/control/ScaleLine';
-import Geolocation from 'ol/Geolocation';
-import { Style, Fill, Stroke, Circle as CircleStyle } from 'ol/style';
-import Zoom from 'ol/control/Zoom';
 import Collection from 'ol/Collection';
 import type Control from 'ol/control/Control';
-import Attribution from 'ol/control/Attribution';
-import { transform } from 'ol/proj';
-import CircleGeom from 'ol/geom/Circle';
-import Point from 'ol/geom/Point';
 import type { Geometry } from 'ol/geom';
-import type { EventsKey } from 'ol/events';
-import { unByKey } from 'ol/Observable';
-import type { Feature as GeoJSONFeature, Geometry as GeoJSONGeometry } from 'geojson';
+import { LayerRegistry } from './layers/LayerRegistry';
+import { BaseLayersController } from './layers/BaseLayerController';
+import { DrawController } from './interactions/DrawController';
+import { ControlsController } from './controls/ControlsController';
+import { GeoController } from './geo/GeoController';
 
+import { isPickableLayer } from './utils/picking';
+import { toViewCoord } from './utils/coords';
 
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
-    let map: OlMap | undefined;                    // <- use the aliased OL Map
-    const layerIndex = new Map<string, BaseLayer>(); // <- this is the built-in Map<K,V>
-    const baseIds = new Set<string>();
-    const superBaseIds = new Set<string>();   
-    const regionalBaseIds = new Set<string>();
-
-    const BASE_BAND = -10000; // zIndex range for base layers (below overlays)
-    const SUPER_BASE_BAND = -20000; // for special bases that must be below all bases
-    // let activeBaseId: string | null = null;
-    let activeRegionalBaseId: string | null = null;
-    let activeSuperBaseId: string | null = null; // optional, only if you later want to switch supers
-
+    let map: OlMap | undefined;        
+    // Composition
     let hover: HoverInfoController | null = null;
-    let drawSource: VectorSource<Feature<Geometry>> | null = null;
-    let drawLayer: VectorLayer<VectorSource<Feature<Geometry>>> | null = null;
+    const registry = new LayerRegistry();
+    const bases = new BaseLayersController(events);
+    const draw = new DrawController(events);
+    const controls = new ControlsController();
+    const geo = new GeoController(events);
 
-    let drawInteraction: Draw | null = null;
-    let modifyInteraction: Modify | null = null;
-    let snapInteraction: Snap | null = null;
-    const _fmt = new GeoJSON();
-
-    let currentDrawStyle = makeDrawStyle(undefined);
-
-    // Controls
-    let ctrlFull: FullScreen | null = null;
-    let ctrlScale: ScaleLine | null = null;
-    let ctrlZoom: Zoom | null = null;
-    let ctrlAttribution: Attribution | null = null;
-
-    // Geolocation
-    let geo: Geolocation | null = null;
-    let geoLayer: VectorLayer<VectorSource> | null = null;
-    let geoSource: VectorSource | null = null;
-    let geoFollow = false;    
-
-    /** Buffer any OL Feature using Turf (returns a new Feature) */
-    async function turfBufferFeature(
-        map: OlMap,
-        feature: Feature<Geometry>,
-        opts: {
-            distance: number;
-            units?: 'meters' | 'kilometers' | 'miles' | 'feet';
-            steps?: number;
-            cap?: 'round' | 'flat' | 'square';
-            join?: 'round' | 'mitre' | 'bevel';
-        }
-    ): Promise<Feature<Geometry> | null> {
-        try {
-            // Lazy-load to avoid bundling Turf if you never use buffer
-            const { default: turfBuffer } = await import('@turf/buffer');
-
-            // IMPORTANT: write to WGS84 for Turf, then read back to view projection
-            const viewProj = String(map.getView().getProjection().getCode());
-            const gj: GeoJSONFeature<GeoJSONGeometry> = _fmt.writeFeatureObject(feature, {
-                dataProjection: 'EPSG:4326',
-                featureProjection: viewProj,
-            });
-
-            // Build ONLY the supported Turf options (use a local inline type to avoid referencing an external type)
-            const turfOpts = {
-                units: (opts.units as 'meters' | 'kilometers' | 'miles' | 'feet') ?? 'meters', // 'meters' is allowed by @turf
-                steps: opts.steps ?? 64,
-            };
-
-            // Call Turf buffer (no cap/join here)
-            const buffered = turfBuffer(gj, opts.distance, turfOpts);
-            // `buffered` is a Feature<Polygon|MultiPolygon> (or undefined on failure)
-            if (!buffered) return null;
-
-            // GeoJSON → OL
-            const out = _fmt.readFeature(
-                buffered as GeoJSONFeature<GeoJSONGeometry>,
-                { dataProjection: 'EPSG:4326', featureProjection: viewProj }
-            ) as Feature<Geometry>;
-
-            return out;
-        } catch (err) {
-            console.warn('Turf buffer failed or not available:', err);
-            return null;
-        }
-    }
-
-    function ensureZoom() {
-        if (!map || ctrlZoom) return;
-        ctrlZoom = new Zoom();              // You can pass options here (duration, className, target)
-        map.addControl(ctrlZoom);
-        events.emit('controls:zoom', { visible: true });
-    }
-
-    function removeZoom() {        
-        if (!map || !ctrlZoom) return;
-        map.removeControl(ctrlZoom);
-        ctrlZoom = null;
-        events.emit('controls:zoom', { visible: false });
-    }
-
-    function ensureAttribution() {
-        if (!map || ctrlAttribution) return;
-        ctrlAttribution = new Attribution({
-            collapsible: true,          // set to false if you always want it visible
-            collapsed: false,           // start expanded if you prefer
-        });
-        map.addControl(ctrlAttribution);
-        events.emit('controls:attribution', { visible: true });
-    }
-
-    function removeAttribution() {
-        if (!map || !ctrlAttribution) return;
-        map.removeControl(ctrlAttribution);
-        ctrlAttribution = null;
-        events.emit('controls:attribution', { visible: false });
-    }
-
-    function ensureScaleLine() {
-        if (!map || ctrlScale) return;
-        ctrlScale = new ScaleLine();
-        map.addControl(ctrlScale);
-        events.emit('controls:scaleline', { visible: true });
-    }
-
-    function removeScaleLine() {
-        if (!map || !ctrlScale) return;
-        map.removeControl(ctrlScale);
-        ctrlScale = null;
-        events.emit('controls:scaleline', { visible: false });
-    }
-
-    function ensureFullScreen() {
-        if (!map || ctrlFull) return;
-        ctrlFull = new FullScreen();
-        map.addControl(ctrlFull);
-    }
-
-    function ensureGeo() {
-        if (!map || geo) return;
-
-        geo = new Geolocation({
-            projection: map.getView().getProjection(),
-            tracking: false,
-            trackingOptions: { enableHighAccuracy: true, maximumAge: 10_000, timeout: 10_000 },
-        });        
-
-        geo.on('change:position', () => {
-            if (!geo || !map) return;
-            const p = geo.getPosition() as [number, number] | null;
-            const acc = geo.getAccuracy();
-            if (!p) {
-                events.emit('geo:position', null);
-                return;
-            }
-            // draw marker & accuracy
-            ensureGeoLayer();
-            geoSource!.clear();
-            const accGeom = new CircleGeom(p, acc || 0);
-            const ptGeom = new Point(p);
-            geoSource!.addFeatures([
-                new Feature({ geometry: accGeom }),
-                new Feature({ geometry: ptGeom }),
-            ]);
-
-            if (geoFollow) {
-                map.getView().setCenter(p);
-            }
-            events.emit('geo:position', { coordinate: p, accuracy: acc ?? undefined });
-        });
-
-        geo.on('error', (e) => {
-            events.emit('geo:error', { message: ((e as unknown) as Error).message ?? 'Geolocation error' });
-        });
-    }
-
-    function ensureGeoLayer() {
-        if (!map || geoLayer) return;
-        geoSource = new VectorSource();
-        geoLayer = new VectorLayer({
-            source: geoSource,
-            properties: { 'nbic:role': 'geolocation' },
-            zIndex: 9998,
-            style: (f) => {
-                const g = f.getGeometry();
-                if (g instanceof CircleGeom) {
-                    return new Style({
-                        fill: new Fill({ color: 'rgba(33, 150, 243, 0.15)' }),
-                        stroke: new Stroke({ color: '#2196f3', width: 1 }),
-                    });
-                }
-                return new Style({
-                    image: new CircleStyle({
-                        radius: 6,
-                        fill: new Fill({ color: '#2196f3' }),
-                        stroke: new Stroke({ color: '#ffffff', width: 2 }),
-                    }),
-                });
-            },
-        });
-        map.addLayer(geoLayer);
-    }
-
-    function removeGeo() {
-        if (!map) return;
-        if (geo) {
-            geo.setTracking(false);
-            geo.un('change:position', () => { });
-            geo = null;
-        }
-        if (geoLayer) { map.removeLayer(geoLayer); geoLayer = null; }
-        geoSource = null;
-    }
-
-    function ensureDrawLayer() {
-        if (!map || drawLayer) return;
-        drawSource = new VectorSource<Feature<Geometry>>();
-        drawLayer = new VectorLayer({
-            source: drawSource,
-            style: currentDrawStyle,
-            properties: { 'nbic:role': 'draw' },
-            zIndex: 9000,
-            updateWhileInteracting: true,
-        });
-        map.addLayer(drawLayer);
-    }
-
-    function removeDrawInteractions() {
-        console.log('removeDrawInteractions');
-        if (!map) return;
-        if (drawInteraction) { map.removeInteraction(drawInteraction); drawInteraction = null; }
-        if (modifyInteraction) { map.removeInteraction(modifyInteraction); modifyInteraction = null; }
-        if (snapInteraction) { map.removeInteraction(snapInteraction); snapInteraction = null; }
-    }
-
-    function markLayer(l: BaseLayer, isBase: boolean, role: 'super' | 'regional' | null) {
-        l.set('nbic:role', isBase ? 'base' : 'overlay');
-        if (role) l.set('nbic:baseRole', role);
-    }
-    function isBaseLayer(l: BaseLayer) {
-        return l.get('nbic:role') === 'base';
-    }
-    function baseRoleOf(l: BaseLayer): 'super' | 'regional' | undefined {
-        return l.get('nbic:baseRole');
-    }
-
-    function enforceRegionalBaseVisibility(chosenId?: string) {
-        if (!map) return;
-        if (!chosenId || !regionalBaseIds.has(chosenId)) return;
-
-        for (const id of regionalBaseIds) {
-            const lyr = layerIndex.get(id);
-            if (!lyr) continue;
-            // lyr.setVisible(id === chosenId); // TODO: transition?
-            lyr.setVisible(true);
-        }
-        activeRegionalBaseId = chosenId;
-    }
-
-    function ensureOnlyOneVisibleRegionalIfAny() {
-        // if none marked visible, pick the first and show only that
-        let first: string | null = null;
-        for (const id of regionalBaseIds) {
-            const l = layerIndex.get(id);
-            if (!l) continue;
-            if (l.getVisible() && !first) {
-                first = id;
-            } else {
-                l.setVisible(id === first);
-            }
-        }
-        activeRegionalBaseId = first;
-    }
-
-    function emitBaseChanged() {
-        events.emit('base:changed', {
-            regional: activeRegionalBaseId,
-            super: activeSuperBaseId            
-        });
-    }   
-
-    function isPickableLayer(l: unknown): boolean {
-        // guard null/undefined
-        if (!l || typeof (l as BaseLayer).get !== 'function') return false;
-        const get = (l as BaseLayer).get.bind(l);
-        // skip temporary layers
-        const role = get('nbic:role');
-        if (role === 'hover') return false;   // and optionally: if (role === 'draw') return false;
-        // respect visibility if available
-        const vis = (l as BaseLayer).getVisible?.();
-        if (vis === false) return false;
-        return true;
-    }
-
-    function toViewCoord(map: OlMap, coord: [number, number], from?: string): [number, number] {        
-        const viewProj = String(map.getView().getProjection().getCode());        
-        if (!from || from === viewProj) return coord;
-        return transform(coord, from, viewProj) as [number, number];
-    }
+    bases.bindFind((id) => registry.get(id) ?? null);
 
     return {
         async init(init: MapInit) {
@@ -353,28 +57,10 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                 interactions: undefined,
             });
 
-            // Controls requested at init
-            if (init.controls?.fullscreen) ensureFullScreen();
-            if (init.controls?.scaleLine) ensureScaleLine();
-            if (init.controls?.zoom) ensureZoom();
-            if (init.controls?.attribution) ensureAttribution();
-            if (init.controls?.geolocation) {
-                ensureGeo();
-                if (init.controls?.geolocationFollow) {
-                    geoFollow = true;
-                    geo!.setTracking(true);
-                }
-            }
-
-            // Fullscreen event (listen to native Fullscreen API)
-            const targetEl = map.getTargetElement();
-            if (targetEl) {
-                targetEl.addEventListener('fullscreenchange', () => {
-                    const active = document.fullscreenElement === targetEl;
-                    events.emit('fullscreen:change', { active });
-                });
-            }
-
+            controls.attach(map, events, init.controls);
+            draw.attach(map);
+            geo.attach(map);
+            
             map.on('moveend', () => {
                 if (!map) return;
                 const v = map.getView();
@@ -391,40 +77,35 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
 
             map.on('singleclick', (evt) => {
                 if (!map) return;
-
                 type ClickFeature = { feature: Feature<Geometry>; layer: BaseLayer; featureId: string; layerId: string; properties?: Record<string, unknown> };
                 const features: ClickFeature[] = [];
-
                 map.forEachFeatureAtPixel(
                     evt.pixel,
                     (f, l) => {
-                        if (!f || typeof (f as Feature<Geometry>).getProperties !== 'function') return undefined;
-                        if (!isPickableLayer(l)) return undefined;
-                        features.push({ feature: f as Feature<Geometry>, layer: l as BaseLayer, featureId: f.getId() as string, layerId: l.get('id') as string, properties: (f as Feature<Geometry>).getProperties() });                        
-                        return undefined; // continue collecting overlaps
+                        if (!f || !isPickableLayer(l)) return undefined;
+                        features.push({
+                            feature: f as Feature<Geometry>,
+                            layer: l as BaseLayer,
+                            featureId: f.getId() as string,
+                            layerId: (l as BaseLayer).get('id') as string,
+                            properties: f.getProperties(),
+                        });
+                        return undefined;
                     },
-                    {
-                        hitTolerance: 5,
-                        layerFilter: (l) =>
-                            (l as BaseLayer).getVisible?.() !== false &&
-                            (l as BaseLayer).get?.('nbic:role') !== 'hover',   // ← ignore hover layer
-                    }
+                    { hitTolerance: 5, layerFilter: isPickableLayer }
                 );
-
                 events.emit('pointer:click', features.length ? { features } : null);
             });
         },
 
-        destroy() {
-            hover?.destroy();
-            hover = null;
+        destroy() {            
+            draw.detach();
+            geo.detach();
+            controls.detach();
             map?.setTarget(undefined);
             map = undefined;
-            layerIndex.clear();
-            baseIds.clear();
-            // activeBaseId = null;
-            activeRegionalBaseId = null;
-            activeSuperBaseId = null;
+            registry.clear();            
+            bases.clear(); 
         },
 
         getCamera() {
@@ -452,134 +133,45 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             map!.getView().fit(ext, { padding: [padding, padding, padding, padding] });
         },
 
+        // layers
         addLayer(def: LayerDef) {
             const layer = toOlLayer(def);
             layer.set('id', def.id);
-            const isBase = !!def.base;
-            // decide role            
-            const role: 'super' | 'regional' | null =
-                def.base === 'super' ? 'super' :
-                    def.base === 'regional' || def.base === true ? 'regional' :
-                        null;
-            markLayer(layer, isBase, role || null);
-
-
             map!.addLayer(layer);
-            layerIndex.set(def.id, layer);
+            registry.add(def.id, layer);
 
-            if (isBase) {
-                // baseIds.add(def.id);
-                // // Put base layers in a low band; keep overlays >= 0
-                // // If caller provided zIndex, respect it; otherwise assign in band.
-                // if (def.zIndex === undefined) {
-                //     // simple stable ordering within base band
-                //     layer.setZIndex(BASE_BAND + layerIndex.size);
-                // }
-                // // If this base is visible, enforce exclusivity
-                // if (def.visible ?? layer.getVisible()) {
-                //     enforceBaseVisibility(def.id);
-                // } else {
-                //     // ensure not accidentally visible if another base is active
-                //     if (activeBaseId) layer.setVisible(false);
-                // }
-                // register into groups
-                baseIds.add(def.id);
-                if (role === 'super') superBaseIds.add(def.id);
-                if (role === 'regional') regionalBaseIds.add(def.id);
-
-                // z-index bands
-                if (def.zIndex === undefined) {
-                    if (role === 'super') {
-                        layer.setZIndex(SUPER_BASE_BAND + superBaseIds.size);
-                    } else {
-                        layer.setZIndex(BASE_BAND + regionalBaseIds.size);
-                    }
-                }
-
-                // initial visibility policy
-                if (role === 'super') {
-                    // keep as requested; if undefined, default to visible
-                    layer.setVisible(def.visible !== false);
-                    if (layer.getVisible()) activeSuperBaseId = def.id;
-                } else {
-                    // regional → exclusive
-                    const wantsVisible = def.visible ?? layer.getVisible();
-                    if (wantsVisible) {
-                        enforceRegionalBaseVisibility(def.id);
-                    } else {
-                        // if something else already active, keep it; otherwise ensure one visible
-                        ensureOnlyOneVisibleRegionalIfAny();
-                    }
-                }
-                emitBaseChanged();
-            } else {
-                // overlay default zIndex (respect provided zIndex)
-                if (def.zIndex !== undefined) layer.setZIndex(def.zIndex);
-            }
+            if (def.base) {
+                const role = def.base === 'super' ? 'super' : 'regional';
+                bases.registerBase(layer, role, def);
+            } else if (def.zIndex !== undefined) {
+                layer.setZIndex(def.zIndex);
+            }            
         },
 
-        removeLayer(layerId: string) {
-            const l = layerIndex.get(layerId);
-            if (l) {
-                map!.removeLayer(l);
-                layerIndex.delete(layerId);
-            }
+        removeLayer(id: string) {            
+            const l = registry.get(id);
+            if (!l) return;
+            map!.removeLayer(l);
+            registry.remove(id);
+            bases.onRemoved(id);
         },        
 
-        setLayerVisibility(layerId: string, visible: boolean) {
-            // const l = layerIndex.get(layerId);
-            // if (!l) return;
-            // const isBase = isBaseLayer(l);
-            // if (isBase && visible) {
-            //     enforceBaseVisibility(layerId); // show this base, hide others
-            // } else {
-            //     l.setVisible(visible);
-            // }
-            const l = layerIndex.get(layerId);
+        setLayerVisibility(id: string, visible: boolean) {            
+            const l = registry.get(id);
             if (!l) return;
-            if (!isBaseLayer(l)) {
-                l.setVisible(visible);
-                return;
-            }
-
-            const role = baseRoleOf(l);
-            if (role === 'super') {
-                // independent toggle
-                l.setVisible(visible);
-                if (visible) activeSuperBaseId = layerId;
-                return;
-            }
-
-            // regional → exclusive when turning on
-            if (visible) {
-                enforceRegionalBaseVisibility(layerId);
-            } else {
-                l.setVisible(false);
-                // keep at least one visible regional if any exist
-                ensureOnlyOneVisibleRegionalIfAny();
-            }
+            if (!bases.isBase(l)) { l.setVisible(visible); return; }
+            bases.setVisibility(l, visible);
         },
 
-        setActiveBase(layerId: string) {
-            if (!regionalBaseIds.has(layerId)) return;
-            enforceRegionalBaseVisibility(layerId);
+        setActiveBase(id: string) {            
+            bases.setActiveRegional(id);
         },
 
-        reorderLayers(order: string[]) {
-            // Keep bases in the base band; overlays above.
-            let overlayZ = 0;
-            let baseZ = BASE_BAND;
-            for (const id of order) {
-                const l = layerIndex.get(id);
-                if (!l) continue;
-                if (isBaseLayer(l)) {
-                    l.setZIndex(baseZ++);
-                } else {
-                    l.setZIndex(overlayZ++);
-                }
-            }
+        reorderLayers(order: string[]) {            
+            registry.reorder(order, bases);
         },
         
+        // hover info        
         activateHoverInfo(options) {
             if (!map) return;
             if (!hover) hover = new HoverInfoController(map, events);
@@ -588,328 +180,37 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         deactivateHoverInfo() {
             hover?.deactivate();
         },
-
-        pickAt(pixel: [number, number]) {
+        
+        // picking
+        pickAt(pixel: [number, number]) {            
             if (!map) return null;
             const coordinate = map.getCoordinateFromPixel(pixel) as MapCoord | undefined;
             if (!coordinate) return null;
-            // return map.forEachFeatureAtPixel(pixel, (feature, layer) => ({
-            //     layerId: (layer && 'get' in layer && typeof layer.get === 'function' ? layer.get('id') : undefined) ?? '',
-            //     featureId: feature.getId() as string,
-            //     properties: feature.getProperties(),
-            //     coordinate: coordinate,
-            // })) ?? null;
-            return (
-                map.forEachFeatureAtPixel(
-                    pixel,
-                    (feature, layer) => {
-                        if (!isPickableLayer(layer)) return undefined;
-                        return {
-                            layerId:
-                                (layer && 'get' in layer && typeof layer.get === 'function' ? layer.get('id') : undefined) ?? '',
-                            featureId: (feature as Feature).getId() as string | number | undefined,
-                            properties: (feature as Feature).getProperties(),
-                            coordinate: coordinate,
-                        };
-                    },
-                    { hitTolerance: 5, layerFilter: isPickableLayer }
-                ) ?? null
-            );
-        },
-
-        // Drawing methods
-        startDrawing(opts) {
-            if (!map) return;
-            ensureDrawLayer();
-            removeDrawInteractions(); // remove any old draw/modify/snap
-
-            currentDrawStyle = makeDrawStyle(opts.style);
-            const olType = opts.kind === 'Text' ? 'Point' : opts.kind;
-
-            // 1) Ensure a Modify exists, but DISABLE IT NOW
-            if (!modifyInteraction) {
-                modifyInteraction = new Modify({ source: drawSource! });
-                map.addInteraction(modifyInteraction);
-            }
-            modifyInteraction.setActive(false); // ← critical: before first click
-
-            // 2) Create Draw
-            drawInteraction = new Draw({
-                source: drawSource!,
-                type: olType as 'Point' | 'LineString' | 'Polygon' | 'Circle',
-                style: currentDrawStyle,
-            });
-
-            drawInteraction.on('drawstart', () => {
-                events.emit('draw:start', { kind: opts.kind });
-            });
-
-            drawInteraction.on('drawend', async (e) => {
-                const f = e.feature as Feature<Geometry>;
-                const styleOptions = opts.style;
-                f.set('nbic:style', styleOptions);
-                f.setStyle(makeDrawStyle(styleOptions));
-                modifyInteraction?.setActive(true);
-
-                // ---- Interactive buffer (Point | LineString | Polygon) via Turf ----
-                const b = opts.buffer;                                
-                const wantsInteractive =
-                    !!b && (b === true || (typeof b === 'object' && b.interactive)) &&
-                    ['Point', 'LineString', 'Polygon'].includes(f.getGeometry()?.getType() || '');
-
-                if (wantsInteractive && map && drawSource) {
-                    const params = (b === true ? {} : b) as {
-                        steps?: number;
-                        style?: DrawStyleOptions;
-                        replaceOriginal?: boolean;
-                        cap?: 'round' | 'flat' | 'square';
-                        join?: 'round' | 'mitre' | 'bevel';
-                        units?: 'meters' | 'kilometers' | 'miles' | 'feet';
+            return map.forEachFeatureAtPixel(
+                pixel,
+                (feature, layer) => {
+                    if (!isPickableLayer(layer)) return undefined;
+                    return {
+                        layerId: (layer as BaseLayer).get('id') as string,
+                        featureId: feature.getId() as string | number | undefined,
+                        properties: feature.getProperties(),
+                        coordinate,
                     };
-
-                    const g = f.getGeometry()!;
-                    const gType = g.getType();
-                    // const viewProj = String(map.getView().getProjection().getCode());
-                    const previewStyle =
-                        params.style ?? { strokeColor: '#0080ff', strokeWidth: 2, fillColor: 'rgba(0,128,255,0.12)' };
-
-                    let preview: Feature<Geometry> | null = null;
-                    let lastDist = 0;
-
-                    // small throttle so Turf isn’t called too often
-                    let lastRun = 0;
-                    const THROTTLE_MS = 90;
-
-                    // distance helper
-                    function distanceToGeometry(px: [number, number]): number {
-                        if (gType === 'Point') {
-                            const c = (g as Point).getCoordinates() as [number, number];
-                            const dx = px[0] - c[0];
-                            const dy = px[1] - c[1];
-                            return Math.sqrt(dx * dx + dy * dy); // map units (meters in your UTM/WebMercator setup)
-                        } else {
-                            const closest = g.getClosestPoint(px) as [number, number];
-                            const dx = px[0] - closest[0];
-                            const dy = px[1] - closest[1];
-                            return Math.sqrt(dx * dx + dy * dy);
-                        }
-                    }
-                    
-                    function detach() {
-                        if (moveKey) { unByKey(moveKey); moveKey = undefined; }
-                        // if (downKey) { unByKey(downKey); downKey = undefined; }
-                    }
-
-                    const finalize = async () => {
-                        // if (!primed) { primed = true; return; }
-
-                        // moveKey = map!.un('pointermove', moveHandler);
-                        detach();
-
-                        if (preview) {
-                            if (params.replaceOriginal) drawSource!.removeFeature(f);
-
-                            events.emit('buffer:created', {
-                                baseFeature: f,
-                                bufferFeature: preview,
-                                distance: lastDist,
-                                units: params.units ?? 'meters',
-                            });
-
-                            // Keep the preview as the final buffer (already styled)
-                            preview = null;
-                        }
-
-                        // restore interactions and exit draw mode
-                        // modifyInteraction?.setActive(true);
-                        // snapInteraction?.setActive?.(true);
-                        // drawInteraction?.setActive(true);
-                        this.stopDrawing();
-                    };
-
-                    // Pause edit interactions while picking
-                    modifyInteraction?.setActive(false);
-                    snapInteraction?.setActive?.(false);
-                    // drawInteraction?.setActive(false);                    
-
-                    let moveKey: EventsKey | undefined = map.on('pointermove', async(evt) => {
-                        const now = performance.now();
-                        if (now - lastRun < THROTTLE_MS) return;
-                        lastRun = now;
-
-                        const dist = distanceToGeometry(evt.coordinate as [number, number]);
-                        if (dist <= 0) return;
-                        lastDist = dist;
-
-                        const buffered = await turfBufferFeature(map!, f, {
-                            distance: dist,                         // map-unit meters → Turf “meters”
-                            units: params.units ?? 'meters',
-                            steps: params.steps ?? 64,
-                            cap: params.cap ?? 'round',
-                            join: params.join ?? 'round',
-                        });
-                        if (!buffered) return;
-
-                        // style + show the preview
-                        buffered.set('nbic:style', previewStyle);
-                        buffered.setStyle(makeDrawStyle(previewStyle));
-
-                        if (preview) drawSource!.removeFeature(preview);
-                        preview = buffered;
-                        drawSource!.addFeature(preview);
-                    });
-
-                    // Use singleclick to finalize; ignore the first one (the draw-end click)
-                    // setTimeout(() => map!.on('singleclick', finalize), 0);
-                    map.once('singleclick', (evt) => {
-                            // (optional) left button guard
-                            if (!map) return;
-                            if (evt.originalEvent && (evt.originalEvent as PointerEvent).button !== 0) {
-                                // if not left, wait for next left click
-                                map.once('singleclick', finalize);
-                                return;
-                            }
-                            finalize();
-                        });
-
-                    // ESC cancels preview and restores interactions
-                    const escHandler = (e: KeyboardEvent) => {
-                        if (e.key !== 'Escape') return;
-                        // map!.un('pointermove', moveHandler);
-                        detach();
-                        map!.un('singleclick', finalize);
-                        if (preview) { drawSource!.removeFeature(preview); preview = null; }
-                        window.removeEventListener('keydown', escHandler);
-                        modifyInteraction?.setActive(true);
-                        snapInteraction?.setActive?.(true);
-                        drawInteraction?.setActive(true);
-                    };
-                    window.addEventListener('keydown', escHandler);
-
-                    events.emit('buffer:interactive:start', { mode: gType });
-                    return; // stop normal flow; interactive finalizes on click
-                }
-
-                // ---- Non-interactive buffer ----
-                
-                const wantsNonInteractive =
-                    !!b && typeof b === 'object' && !b.interactive;
-
-                if (wantsNonInteractive && map && drawSource) {
-                    const g = f.getGeometry();
-                    const gt = g?.getType();
-
-                    if (gt === 'LineString' || gt === 'Polygon' || gt === 'Point') {
-                        const buffered = await turfBufferFeature(map, f, {
-                            distance: b.distance ?? 50,
-                            units: b.units ?? 'meters',
-                            steps: b.steps ?? 64,
-                            cap: b.cap ?? 'round',
-                            join: b.join ?? 'round',
-                        });
-
-                        if (buffered) {
-                            const finalStyle =
-                                b.style ??
-                                { strokeColor: '#0057ff', strokeWidth: 2, fillColor: 'rgba(0,87,255,0.16)' };
-
-                            buffered.set('nbic:style', finalStyle);
-                            buffered.setStyle(makeDrawStyle(finalStyle));
-                            drawSource.addFeature(buffered);
-                            this.stopDrawing();
-                            if (b.replaceOriginal) drawSource.removeFeature(f);
-
-                            events.emit('buffer:created', {
-                                baseFeature: f,
-                                bufferFeature: buffered,
-                                distance: b.distance ?? 0,
-                                units: b.units ?? 'meters',
-                            });
-                        }
-                    }
-                }
-
-                // normal end event
-                events.emit('draw:end', { feature: f });
-            });
-
-            map.addInteraction(drawInteraction);
-
-            // 3) Snap (keeps the vertex exactly on edge/vertex)
-            const snapTolerance = Math.max(2, Math.min(25, 10));
-            if (opts.snap ?? true) {
-                snapInteraction = new Snap({ source: drawSource!, pixelTolerance: snapTolerance });
-                map.addInteraction(snapInteraction);
-            }
+                },
+                { hitTolerance: 5, layerFilter: isPickableLayer }
+            ) ?? null;
         },
 
-        stopDrawing() {
-            removeDrawInteractions();
-        },
+        // drawing
+        startDrawing: (opts) => draw.start(opts),
+        stopDrawing: () => draw.stop(),
+        enableDrawEditing: () => draw.enableEditing(),
+        disableDrawEditing: () => draw.disableEditing(),
+        clearDrawn: () => draw.clear(),
+        exportDrawnGeoJSON: (opts) => draw.exportGeoJSON(map!, opts),
+        importDrawnGeoJSON: (geojson, opts) => draw.importGeoJSON(map!, geojson, opts),
 
-        enableDrawEditing() {
-            if (!map) return;
-            ensureDrawLayer();
-            if (!modifyInteraction) {
-                modifyInteraction = new Modify({ source: drawSource! });
-                map.addInteraction(modifyInteraction);
-                modifyInteraction.on('modifyend', (e) => {
-                    events.emit('edit:modified', { count: e.features.getLength() });
-                });
-            }
-            if (!snapInteraction) {
-                snapInteraction = new Snap({ source: drawSource! });
-                map.addInteraction(snapInteraction);
-            }
-        },
-
-        disableDrawEditing() {
-            if (!map) return;
-            if (modifyInteraction) { map.removeInteraction(modifyInteraction); modifyInteraction = null; }
-            if (snapInteraction) { map.removeInteraction(snapInteraction); snapInteraction = null; }
-        },
-
-        clearDrawn() {
-            const count = drawSource?.getFeatures().length ?? 0;
-            drawSource?.clear(true);
-            events.emit('draw:cleared', { count });
-        },
-
-        exportDrawnGeoJSON(opts) {
-            // serialize using view projection
-            const fmt = new GeoJSON();
-            const json = fmt.writeFeatures(drawSource?.getFeatures() ?? [], {
-                featureProjection: String(map?.getView().getProjection() ?? 'EPSG:3857'),
-            });
-            return opts?.pretty ? JSON.stringify(JSON.parse(json), null, 2) : json;
-        },
-
-        importDrawnGeoJSON(geojson, opts) {
-            if (!map) return;
-            ensureDrawLayer();
-
-            const fmt = new GeoJSON();
-            const features = fmt.readFeatures(geojson, {
-                featureProjection: String(map.getView().getProjection()),
-            });
-
-            if (opts?.clearExisting) drawSource!.clear(true);
-            for (const f of features) {
-                const styleOpts = f.get('nbic:style') as DrawStyleOptions | undefined;
-                if (styleOpts) {
-                    f.setStyle(makeDrawStyle(styleOpts)); // ← persist style after import
-                }
-                // for text points, if you store a 'label' property:
-                const label = f.get('label') as string | undefined;
-                if (label && styleOpts?.text) {
-                    // ensure text label is applied (makeDrawStyle reads text.label)
-                    f.setStyle(makeDrawStyle({ ...styleOpts, text: { ...styleOpts.text, label } }));
-                }
-            }
-            drawSource!.addFeatures(features);
-            events.emit('draw:imported', { count: features.length });
-        },
-
+        // full-screen
         enterFullScreen() {
             if (!map) return;
             const el = map.getTargetElement();
@@ -922,82 +223,38 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             if (document.fullscreenElement) {
                 void document.exitFullscreen().catch(() => {/* ignore */ });
             }
-        },
+        },        
 
-        showScaleLine() { ensureScaleLine(); },
-        hideScaleLine() { removeScaleLine(); },
+        // controls
+        showScaleLine: () => controls.ensureScaleLine(map!, events),
+        hideScaleLine: () => controls.removeScaleLine(map!, events),
+        showZoomControl: () => controls.ensureZoom(map!, events),
+        hideZoomControl: () => controls.removeZoom(map!, events),
+        showAttribution: () => controls.ensureAttribution(map!, events),
+        hideAttribution: () => controls.removeAttribution(map!, events),        
 
-        showZoomControl() { ensureZoom(); },
-        hideZoomControl() { removeZoom(); },
+        // geolocation
+        activateGeolocation: (follow?: boolean) => geo.activate(follow),
+        deactivateGeolocation: () => geo.deactivate(),
+        zoomToGeolocation: (maxZoom?: number) => geo.zoomToGeolocation(maxZoom),
 
-        showAttribution() { ensureAttribution(); },
-        hideAttribution() { removeAttribution(); },
+        // vector layers
+        getVectorLayerSource: (layerId) => registry.getVectorSource(layerId),        
 
-        activateGeolocation(follow?: boolean) {
-            if (!map) return;
-            ensureGeo();
-            geoFollow = !!follow;
-            geo!.setTracking(true);
-        },
-
-        deactivateGeolocation() {
-            geoFollow = false;
-            if (geo) geo.setTracking(false);
-            // keep layer so last position remains visible; remove if you prefer:
-            geoSource?.clear(); 
-            removeGeo();
-        },
-        async zoomToGeolocation(maxZoom = 14): Promise<boolean> {
-            if (!map) return false;
-            ensureGeo();
-            geo!.setTracking(true);
-
-            return new Promise<boolean>((resolve) => {
-                const once = () => {
-                    const p = geo!.getPosition() as [number, number] | null;
-                    if (p) {
-                        ensureGeoLayer();
-                        if (map) {
-                            map.getView().animate({ center: p, zoom: Math.max(map.getView().getZoom() ?? 0, maxZoom), duration: 300 });
-                        }
-                        resolve(true);
-                    } else {
-                        resolve(false);
-                    }
-                    geo!.un('change:position', once);
-                    // stop tracking if you don’t want continuous updates:
-                    geo!.setTracking(false);
-                };
-                geo!.on('change:position', once);
-            });
-        },
-
-        getVectorLayerSource(layerId: string): VectorSource<Feature<Geometry>> | null {
-            const l = layerIndex.get(layerId) as VectorLayer<VectorSource<Feature<Geometry>>> | undefined;
-            if (!l || typeof l.getSource !== 'function') return null;
-            return l.getSource() as VectorSource<Feature<Geometry>> | null;
-        },
-
-        addPoint(layerId: string, coordinate: MapCoord, props?: Record<string, unknown>, style?: DrawStyleOptions, opts?: InsertGeomOptions) {
-            if (!map) return false;
-            const src = this.getVectorLayerSource(layerId);
-            if (!src) return false;
+        addPoint(layerId: string, coordinate: MapCoord, props?: Record<string, unknown>, style?: DrawStyleOptions, opts?: InsertGeomOptions) {        
+            const src = registry.getVectorSource(layerId);
+            if (!map || !src) return false;
             const viewCoord = toViewCoord(map, coordinate, opts?.dataProjection);
-            const f = new Feature({ geometry: new Point(viewCoord) });
-            if (props) for (const [k, v] of Object.entries(props)) f.set(k, v);
-            if (style) {
-                f.set('nbic:style', style);
-                f.setStyle(makeDrawStyle(style));
-            }
+            const f = draw.createPointFeature(viewCoord, props, style);
             src.addFeature(f);
             return true;
         },
 
         removeAllFromLayer(layerId: string) {
-            const src = this.getVectorLayerSource(layerId);
+            const src = registry.getVectorSource(layerId);
             if (!src) return false;
             src.clear(true);
             return true;
-        },
+        },        
     };
 }
