@@ -197,8 +197,7 @@ export class DrawController {
                     // exit drawing mode (like you do elsewhere)
                     this.stop();
                 };
-
-                // finalize on next singleclick (ignores the draw-end click because we attach after)
+                // TODO: fix when interactive point -> finalize on next singleclick (ignores the draw-end click because we attach after)
                 this.map.once('singleclick', () => finalize());
 
                 // ESC cancels
@@ -218,9 +217,9 @@ export class DrawController {
             }
 
             // ——— Non-interactive buffer ———
-            const wantsNonInteractive = !!b && typeof b === 'object' && b.interactive;
+            const wantsNonInteractive = !!b && typeof b === 'object' && !b.interactive;
             if (wantsNonInteractive && this.map && this.source) {
-                const bb = b as { distance?: number; units?: 'meters' | 'kilometers' | 'miles' | 'feet' ; steps?: number; style?: DrawStyleOptions; replaceOriginal?: boolean; };
+                const bb = b as { distance?: number; units?: 'meters' | 'kilometers' | 'miles' | 'feet' ; steps?: number; style?: DrawStyleOptions; replaceOriginal?: boolean; };                
                 const buffered = await this.turfBufferFeature(f, {
                     distance: bb.distance ?? 50,
                     units: bb.units ?? 'meters',
