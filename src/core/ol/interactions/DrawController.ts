@@ -15,6 +15,7 @@ import type { Emitter } from '../../state/store';
 import { makeDrawStyle } from '../adapters/draw-style';
 import { Feature } from 'ol';
 import { unByKey } from 'ol/Observable';
+import { listen } from 'ol/events';
 import type { EventsKey } from 'ol/events';
 
 import type { DrawOptions, DrawStyleOptions, DrawExportOptions, DrawImportOptions } from '../../../api/types';
@@ -185,20 +186,22 @@ export class DrawController {
                     preview = buffered;
                     this.source!.addFeature(preview);
                 });
+                const pointerDownListener = listen(this.map,'pointerdown', () => finalize());
+
+                const detach = () => {
+                    if (moveKey) { unByKey(moveKey); moveKey = undefined; }
+                    if (pointerDownListener) { unByKey(pointerDownListener); }
+                };
 
                 const finalize = () => {
-                    if (moveKey) { unByKey(moveKey); moveKey = undefined; }
+                    detach();
                     if (preview) {
-                        if (params.replaceOriginal) this.source!.removeFeature(f);
-                        // keep preview as final (already styled)
+                        if (params.replaceOriginal) this.source!.removeFeature(f);                        
                         this.events.emit('buffer:created', { baseFeature: f, bufferFeature: preview, distance: lastDist, units: params.units ?? 'meters' });
                         preview = null;
-                    }
-                    // exit drawing mode (like you do elsewhere)
+                    }                    
                     this.stop();
-                };
-                // TODO: fix when interactive point -> finalize on next singleclick (ignores the draw-end click because we attach after)
-                this.map.once('singleclick', () => finalize());
+                };                                
 
                 // ESC cancels
                 const esc = (e: KeyboardEvent) => {
@@ -213,7 +216,7 @@ export class DrawController {
                 window.addEventListener('keydown', esc);
 
                 this.events.emit('buffer:interactive:start', { mode: gType });
-                return; // interactive manages its own finalize
+                return; // interactive manages its own finalize                
             }
 
             // ——— Non-interactive buffer ———
