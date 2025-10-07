@@ -24,6 +24,7 @@ import { BaseLayersController } from './layers/BaseLayerController';
 import { DrawController } from './interactions/DrawController';
 import { ControlsController } from './controls/ControlsController';
 import { GeoController } from './geo/GeoController';
+import { ZoomController } from './zoom/ZoomController';
 
 import { isPickableLayer } from './utils/picking';
 import { toViewCoord } from './utils/coords';
@@ -37,6 +38,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     const draw = new DrawController(events);
     const controls = new ControlsController();
     const geo = new GeoController(events);
+    const zoom = new ZoomController();
 
     bases.bindFind((id) => registry.get(id) ?? null);
 
@@ -59,7 +61,10 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
 
             controls.attach(map, events, init.controls);
             draw.attach(map);
+            const dl = draw.getLayer();
+            if (dl) registry.add('draw-layer', dl);
             geo.attach(map);
+            zoom.attach(map);
             
             map.on('moveend', () => {
                 if (!map) return;
@@ -255,6 +260,12 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             if (!src) return false;
             src.clear(true);
             return true;
-        },        
+        },    
+        
+        // Zoom
+        zoomToFeature: (layerId, featureId, opts) => zoom.zoomToFeatureById(registry, layerId, featureId, opts),
+        zoomToLayer: (layerId, opts) => zoom.zoomToLayerById(registry, layerId, opts),
+        zoomToExtent: (extent, opts) => zoom.zoomToExtent(extent, opts),
+        fitGeometry: (geom, opts) => zoom.fitGeometry(geom, opts),
     };
 }

@@ -206,9 +206,9 @@ map.addLayer({
     },
 })
 
-// map.on('pointer:click', (event) => {
-//     console.log('Map clickedA:', event);
-// });
+map.on('pointer:click', (event) => {
+    console.log('Map clickedA:', event);
+});
 
 declare global {
     interface Window {

@@ -34,8 +34,10 @@ export class DrawController {
 
     constructor(private events: Emitter<MapEventMap>) { }
 
-    attach(map: OlMap) { this.map = map; }
+    attach(map: OlMap) { this.map = map;}
     detach() { this.stop(); this.map = undefined; }
+
+    getLayer() { this.ensureLayer(); return this.layer; }
 
     // ————— helpers —————
     private ensureLayer() {
@@ -43,11 +45,12 @@ export class DrawController {
         this.source = new VectorSource<OlFeature<Geometry>>();
         this.layer = new VectorLayer({
             source: this.source,
-            properties: { 'nbic:role': 'draw' },
+            properties: { 'nbic:role': 'draw', id: 'draw-layer' },
             zIndex: 9000,
             style: this.currentDrawStyle,
             updateWhileInteracting: true,
         });
+        this.layer.set('id', 'draw-layer');
         this.map.addLayer(this.layer);
     }
 

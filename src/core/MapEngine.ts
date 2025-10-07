@@ -56,6 +56,12 @@ export interface MapEngine {
     getVectorLayerSource(layerId: string): VectorSource<Feature<Geometry>> | null;
     addPoint(layerId: string, coord: MapCoord, properties?: Record<string, unknown>, style?: DrawStyleOptions, opts?: InsertGeomOptions): boolean;
     removeAllFromLayer(layerId: string): boolean;
+
+    // Zoom
+    zoomToFeature(layerId: string, featureId: string, opts?: { maxZoom?: number; padding?: number }): boolean;
+    zoomToLayer(layerId: string, opts?: { maxZoom?: number; padding?: number }): boolean;
+    zoomToExtent(extent: Extent, opts?: { maxZoom?: number; padding?: number }): boolean;
+    fitGeometry(geom: Geometry, opts?: { maxZoom?: number; padding?: number }): boolean;
 }
 
 export type MapEngineFactory = (events: Emitter<MapEventMap>) => MapEngine;

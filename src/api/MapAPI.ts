@@ -15,6 +15,7 @@ import { createEmitter } from '../core/state/store';
 import { createOlEngine } from '../core/ol/OlMapEngine';
 import type { MapEventMap } from './events';
 import type { Extent } from 'ol/extent';
+import type { Geometry } from 'ol/geom';
 export class MapAPI {
     private engine: MapEngine;
     private events: Emitter<MapEventMap>;
@@ -110,4 +111,18 @@ export class MapAPI {
     activateGeolocation(follow?: boolean) { this.engine.activateGeolocation(follow); }
     deactivateGeolocation() { this.engine.deactivateGeolocation(); }
     zoomToGeolocation(maxZoom?: number) { return this.engine.zoomToGeolocation(maxZoom); }
+
+    // Zoom
+    zoomToFeature(layerId: string, featureId: string, opts?: { maxZoom?: number; padding?: number }): boolean {
+        return this.engine.zoomToFeature(layerId, featureId, opts);
+    }
+    zoomToLayer(layerId: string, opts?: { maxZoom?: number; padding?: number }): boolean {
+        return this.engine.zoomToLayer(layerId, opts);
+    }
+    zoomToExtent(extent: Extent, opts?: { maxZoom?: number; padding?: number }): boolean {
+        return this.engine.zoomToExtent(extent, opts);
+    }
+    fitGeometry(geom: Geometry, opts?: { maxZoom?: number; padding?: number }): boolean {
+        return this.engine.fitGeometry(geom, opts);
+    }
 }
