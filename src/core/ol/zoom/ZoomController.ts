@@ -2,7 +2,7 @@
 import type Map from 'ol/Map';
 import type BaseLayer from 'ol/layer/Base';
 import type VectorLayer from 'ol/layer/Vector';
-import type VectorSource from 'ol/source/Vector';
+import VectorSource from 'ol/source/Vector';
 import type { Geometry } from 'ol/geom';
 import type { Feature } from 'ol';
 import type { Extent } from 'ol/extent';
@@ -74,7 +74,8 @@ export class ZoomController {
 
     zoomToLayer(layer: VectorLayer<VectorSource<Feature<Geometry>>>, opts?: ZoomOpts) {
         const src = layer.getSource();
-        if (!src) return false;
+        if (!src) return false;        
+        if (!(src instanceof VectorSource)) return console.warn('zoomToLayer: not a vector source'), false;
         const feats = src.getFeatures() as Feature<Geometry>[];
         if (!feats.length) return false;
 
