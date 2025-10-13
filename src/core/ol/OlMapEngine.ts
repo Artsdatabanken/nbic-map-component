@@ -10,7 +10,8 @@ import type {
     CameraState,
     LayerDef,        
     DrawStyleOptions,
-    InsertGeomOptions,    
+    InsertGeomOptions,
+    UpdateGeoJSONLayerOptions    
 } from '../../api/types';
 import { Feature, View } from 'ol';
 import { toOlLayer } from './adapters/layers';
@@ -25,6 +26,11 @@ import { DrawController } from './interactions/DrawController';
 import { ControlsController } from './controls/ControlsController';
 import { GeoController } from './geo/GeoController';
 import { ZoomController } from './zoom/ZoomController';
+import GeoJSON from 'ol/format/GeoJSON';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import type { Feature as OlFeature } from 'ol';
+import Cluster from 'ol/source/Cluster';
 
 import { isPickableLayer } from './utils/picking';
 import { toViewCoord } from './utils/coords';
@@ -139,6 +145,24 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         },
 
         // layers
+        listLayerIds: () => registry.listIds(),
+
+        listBaseLayerIds: () => registry
+            .listIds()
+            .filter(id => {
+                const l = registry.get(id);
+                return !!l && bases.isBase(l);
+            }),
+
+        listOverlayLayerIds: () => registry
+            .listIds()
+            .filter(id => {
+                const l = registry.get(id);
+                return !!l && !bases.isBase(l);
+            }),
+
+        getLayerById: (id) => registry.get(id) ?? null,
+        
         addLayer(def: LayerDef) {
             const layer = toOlLayer(def);
             layer.set('id', def.id);
@@ -159,7 +183,162 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             map!.removeLayer(l);
             registry.remove(id);
             bases.onRemoved(id);
-        },        
+        },    
+        
+        adoptLayer(id, layer, opts) {
+            if (!map || !layer) return;
+            // Tag + ID
+            layer.set('id', id);
+            layer.set('nbic:external', true);
+            layer.set('nbic:role', opts?.role ?? 'overlay');
+            layer.set('nbic:pickable', opts?.pickable !== false); // default true
+
+            // Add to map + registry
+            map.addLayer(layer);
+            registry.add(id, layer);
+
+            // Base vs overlay
+            if (opts?.base) {
+                const role = opts.base === 'super' ? 'super' : 'regional';
+                bases.registerBase(layer, role, { id, base: role } as LayerDef);
+            } else if (opts?.zIndex !== undefined) {
+                layer.setZIndex(opts.zIndex);
+            }
+
+            // Optional: emit the same event as addLayer
+            // events.emit('layer:added', { layerId: id });
+        },
+
+        ejectLayer(id) {
+            const l = registry.get(id);
+            if (!l) return;
+            map!.removeLayer(l);
+            registry.remove(id);
+            bases.onRemoved(id);
+            // events.emit('layer:removed', { layerId: id });
+        },
+
+        updateGeoJSONLayer(            
+            layerId: string,
+            geojson: string | object,
+            opts?: UpdateGeoJSONLayerOptions
+        ): boolean {
+            const layer = registry.get(layerId) as VectorLayer<VectorSource<OlFeature<Geometry>>> | undefined;
+            if (!map || !layer) return false;
+
+            // 1) Resolve projections
+            const viewProj = String(map.getView().getProjection().getCode());
+            const dataProj =
+                opts?.dataProjection ??    
+                (layer.get('nbic:dataProjection') as string | undefined) // recorded at creation                
+                ?? viewProj; // assume same as view if not specified                            
+            // 2) Read incoming features            
+            const fmt = new GeoJSON();
+            const text = typeof geojson === 'string' ? geojson : JSON.stringify(geojson);
+            const incoming = fmt.readFeatures(text, {
+                dataProjection: dataProj,
+                featureProjection: viewProj,
+            }) as OlFeature<Geometry>[];
+
+            // Optional: set ids from a property
+            const idProp = opts?.idProperty;
+            if (idProp) {
+                for (const f of incoming) {
+                    const id = f.get(idProp) as string | number | undefined;
+                    if (id !== undefined) f.setId(id);
+                }
+            }
+
+            // 3) Figure out clustering
+            const currentSrc = layer.getSource();
+            const clusterMeta = layer.get('nbic:cluster') as
+                | { distance?: number; minDistance?: number }
+                | undefined;
+
+            const isClustered = currentSrc instanceof Cluster;
+            const curVector = isClustered
+                ? (currentSrc as Cluster).getSource()
+                : currentSrc;
+
+            const mode = opts?.mode ?? 'replace';
+
+            // 4) Build the next underlying VectorSource (memory only → no loader)
+            let nextVector: VectorSource<OlFeature<Geometry>>;
+
+            if (mode === 'replace') {
+                nextVector = new VectorSource<OlFeature<Geometry>>({ features: incoming });
+            } else {
+                // MERGE
+                const existing = (curVector?.getFeatures() ?? []) as OlFeature<Geometry>[];
+                const byId = new Map<string | number, OlFeature<Geometry>>();
+                for (const f of existing) {
+                    const id = f.getId();
+                    if (id !== undefined && id !== null) byId.set(id as string | number, f);
+                }
+
+                const merged: OlFeature<Geometry>[] = [];
+                const seen = new Set<string | number>();
+
+                for (const nf of incoming) {
+                    const id = nf.getId();
+                    if (id === undefined || id === null) {
+                        merged.push(nf); // new feature without id
+                        continue;
+                    }
+                    seen.add(id as string | number);
+                    const cur = byId.get(id as string | number);
+                    if (!cur) {
+                        merged.push(nf);
+                    } else {
+                        // update geometry + properties
+                        const g = nf.getGeometry();
+                        if (g) cur.setGeometry(g);
+                        const props = nf.getProperties(); delete props.geometry;
+                        cur.setProperties(props);
+
+                        // styles: keep old if requested, else leave as-is or copy a style marker if you use one
+                        if (!opts?.keepStyles) {
+                            const s = nf.get('nbic:style');
+                            if (s) cur.setStyle(cur.getStyle()); // or your makeDrawStyle(s)
+                        }
+
+                        merged.push(cur);
+                    }
+                }
+
+                // keep unmatched existing without ids
+                for (const f of existing) {
+                    const id = f.getId();
+                    if (id === undefined || id === null) merged.push(f);
+                }
+
+                nextVector = new VectorSource<OlFeature<Geometry>>({ features: merged });
+            }
+
+            // 5) Wrap with Cluster again if needed (preserve distance/minDistance)
+            let nextSource: VectorSource<OlFeature<Geometry>> | Cluster;
+            if (isClustered || clusterMeta) {
+                const distance = currentSrc instanceof Cluster
+                    ? currentSrc.getDistance?.() ?? clusterMeta?.distance ?? 40
+                    : clusterMeta?.distance ?? 40;
+
+                const minDistance = currentSrc instanceof Cluster
+                    ? currentSrc.getMinDistance?.() ?? clusterMeta?.minDistance ?? 0
+                    : clusterMeta?.minDistance ?? 0;
+
+                nextSource = new Cluster({
+                    distance,
+                    minDistance,
+                    source: nextVector,
+                });
+            } else {
+                nextSource = nextVector;
+            }
+
+            // 6) Swap the source → this detaches any URL/loader so pans/zooms won’t revert your edits
+            layer.setSource(nextSource);
+            return true;
+        },
 
         setLayerVisibility(id: string, visible: boolean) {            
             const l = registry.get(id);

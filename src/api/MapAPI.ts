@@ -9,6 +9,8 @@ import type {
     DrawOptions,
     DrawStyleOptions,
     InsertGeomOptions,
+    UpdateGeoJSONLayerOptions,
+    AdoptLayerOptions
 } from './types';
 import type { MapEngine } from '../core/MapEngine';
 import { createEmitter } from '../core/state/store';
@@ -16,6 +18,7 @@ import { createOlEngine } from '../core/ol/OlMapEngine';
 import type { MapEventMap } from './events';
 import type { Extent } from 'ol/extent';
 import type { Geometry } from 'ol/geom';
+import type BaseLayer from 'ol/layer/Base';
 export class MapAPI {
     private engine: MapEngine;
     private events: Emitter<MapEventMap>;
@@ -53,22 +56,26 @@ export class MapAPI {
     }
 
     /** Return all layers marked as base (in insertion order). */
-    getBaseLayers(): LayerDef[] {
-        return Array.from(this.layerDefs.values()).filter(l => !!l.base);
+    getBaseLayerIds(): string[] {
+        return this.engine.listBaseLayerIds();
+    }
+    getOverlayLayerIds(): string[] {
+        return this.engine.listOverlayLayerIds();
     }
 
-    /** Return all layers that are not base (overlays). */
+    /** If you still want full LayerDef[] for config-only layers, keep these: */
+    getBaseLayers(): LayerDef[] {
+        // legacy: only those added through addLayer
+        return Array.from(this.layerDefs.values()).filter(l => !!l.base);
+    }
     getOverlayLayers(): LayerDef[] {
         return Array.from(this.layerDefs.values()).filter(l => !l.base);
     }
 
-    /** Convenience if you just need IDs */
-    getBaseLayerIds(): string[] {
-        return this.getBaseLayers().map(l => l.id);
-    }
-    getOverlayLayerIds(): string[] {
-        return this.getOverlayLayers().map(l => l.id);
-    }
+    /** Or add engine-backed variants that return live OL layers: */
+    getLayerById(id: string): BaseLayer | null {
+        return this.engine.getLayerById(id);
+    }    
 
     setCenter(center: MapCoord) { this.engine.setCenter(center); }
     setZoom(zoom: number) { this.engine.setZoom(zoom); }
@@ -76,11 +83,15 @@ export class MapAPI {
 
     addLayer(layer: LayerDef) { this.layerDefs.set(layer.id, layer); this.engine.addLayer(layer); this.events.emit('layer:added', { layerId: layer.id }); }
     removeLayer(layerId: string) { this.layerDefs.delete(layerId); this.engine.removeLayer(layerId); this.events.emit('layer:removed', { layerId }); }
+    updateGeoJSONLayer(layerId: string, geojson: string, opts?: UpdateGeoJSONLayerOptions) { this.engine.updateGeoJSONLayer(layerId, geojson, opts); }
     setLayerVisibility(layerId: string, visible: boolean) { this.engine.setLayerVisibility(layerId, visible); }
     reorderLayers(order: string[]) { this.engine.reorderLayers(order); }
 
     addPoint(layerId: string, coord: MapCoord, properties?: Record<string, unknown>, style?: DrawStyleOptions, opts?: InsertGeomOptions): boolean { return this.engine.addPoint(layerId, coord, properties, style, opts); }
     removeAllFromLayer(layerId: string): boolean { return this.engine.removeAllFromLayer(layerId); }
+
+    adoptLayer(id: string, layer: BaseLayer, opts?: AdoptLayerOptions) { this.engine.adoptLayer(id, layer, opts); }
+    ejectLayer(id: string) { this.engine.ejectLayer(id); this.layerDefs.delete(id); this.events.emit('layer:removed', { layerId: id }); }
 
     activateHoverInfo(options?: HoverInfoOptions) { this.engine.activateHoverInfo(options); }
     deactivateHoverInfo() { this.engine.deactivateHoverInfo(); }

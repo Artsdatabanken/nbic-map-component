@@ -20,7 +20,8 @@ export class LayerRegistry {
         const src = lyr.getSource();
         return (src as VectorSource<import('ol').Feature<Geometry>>) ?? null;
     }
-
+    listIds(): string[] { return Array.from(this.index.keys()); }
+    
     /** Reorder overlays and bases. You’ll usually call this from BaseLayersController. */
     reorder(order: string[], bases: { isBase: (l: BaseLayer) => boolean; baseBand: number }): void {
         let overlayZ = 0;

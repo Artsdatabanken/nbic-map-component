@@ -7,5 +7,6 @@ export function isPickableLayer(l: unknown): boolean {
     if (role === 'hover') return false;
     const vis = (l as BaseLayer).getVisible?.();
     if (vis === false) return false;
+    if (get('nbic:pickable') === false) return false;
     return true;
 }

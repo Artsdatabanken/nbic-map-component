@@ -1,11 +1,12 @@
 // src/core/MapEngine.ts
-import type { MapInit, MapCoord, CameraState, LayerDef, HitResult, HoverInfoOptions, DrawImportOptions, DrawExportOptions, DrawOptions, DrawStyleOptions, InsertGeomOptions } from '../api/types';
+import type { MapInit, MapCoord, CameraState, LayerDef, HitResult, HoverInfoOptions, DrawImportOptions, DrawExportOptions, DrawOptions, DrawStyleOptions, InsertGeomOptions, UpdateGeoJSONLayerOptions, AdoptLayerOptions } from '../api/types';
 import type { MapEventMap } from '../api/events';
 import type { Emitter } from '../core/state/store';
 import type { Extent } from 'ol/extent';
 import VectorSource from 'ol/source/Vector';
 import { Feature } from 'ol';
 import type { Geometry } from 'ol/geom';
+import type BaseLayer from 'ol/layer/Base';
 
 export interface MapEngine {
     init(init: MapInit): Promise<void>;
@@ -19,9 +20,18 @@ export interface MapEngine {
 
     addLayer(def: LayerDef): void;
     removeLayer(layerId: string): void;    
+    updateGeoJSONLayer(layerId: string, geojson: string, opts?: UpdateGeoJSONLayerOptions): void;
     setLayerVisibility(layerId: string, visible: boolean): void;
     reorderLayers(order: string[]): void;
     setActiveBase(layerId: string): void;
+    adoptLayer(id: string, layer: BaseLayer, opts?: AdoptLayerOptions): void;
+
+    listLayerIds(): string[];
+    listBaseLayerIds(): string[];
+    listOverlayLayerIds(): string[];
+    getLayerById(id: string): BaseLayer | null;
+
+    ejectLayer(id: string): void;  // alias to removeLayer
 
     pickAt(pixel: [number, number]): HitResult | null;
 

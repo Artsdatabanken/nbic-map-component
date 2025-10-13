@@ -292,6 +292,13 @@ export type SourceRef = { ref: string };
 
 export type SourceInput = SourceDef | SourceRef;
 
+export interface AdoptLayerOptions {
+    base?: 'regional' | 'super';     // if you ever want to adopt a base
+    zIndex?: number;                 // optional explicit zIndex
+    pickable?: boolean;              // default true (respected by isPickableLayer)
+    role?: 'overlay' | 'hover' | 'draw'; // default 'overlay'
+}
+
 // ---- layer def ----
 export interface LayerDef {
     id: string;
@@ -304,13 +311,20 @@ export interface LayerDef {
     background?: string;
     minZoom?: number;
     maxZoom?: number;
-    opacity?: number;
+    opacity?: number;    
     cluster?: {
         enabled: boolean;
         distance?: number;      // px distance between points
         minDistance?: number;   // minimum distance
         style?: StyleDef;       // cluster style (circle + text etc.)
     };
+}
+
+export interface UpdateGeoJSONLayerOptions {
+    mode?: 'replace' | 'merge';          // default: 'replace'
+    dataProjection?: string;             // default: 'EPSG:4326'
+    keepStyles?: boolean;                // keep existing nbic:style if same id
+    idProperty?: string;
 }
 
 export interface HoverInfoOptions {

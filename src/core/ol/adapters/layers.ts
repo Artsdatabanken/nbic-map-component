@@ -104,6 +104,8 @@ export function toOlLayer(
                 //             ? styleFn(def.style)
                 //             : (f: FeatureLike, r: number) => styleFromFeature(f, r);
 
+                
+
                 const finalSource = def.cluster?.enabled
                     ? new ClusterSource({
                         distance: def.cluster.distance ?? 40,
@@ -179,6 +181,13 @@ export function toOlLayer(
                     style: style as StyleLike, // styleFn as unknown as StyleLike,
                     properties: { id: def.id },
                 });
+
+                if (def.source && typeof def.source === 'object') {
+                    const sourceDef = def.source as SourceDef;
+                    if (sourceDef.type === 'geojson' && sourceDef.options.dataProjection){
+                        layer.set('nbic:dataProjection', sourceDef.options.dataProjection);
+                    }
+                }
 
                 // let style = def.style ? styleFn(def.style as StyleDef) : undefined;
 
