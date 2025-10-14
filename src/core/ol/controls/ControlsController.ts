@@ -6,6 +6,8 @@ import FullScreen from 'ol/control/FullScreen';
 import type OlMap from 'ol/Map';
 import type { Emitter } from '../../state/store';
 import type { MapEventMap } from '../../../api/events';
+import type Control from 'ol/control/Control';
+import BaseObject from 'ol/Object';
 
 type ControlsInit = {
     fullscreen?: boolean;
@@ -22,6 +24,8 @@ export class ControlsController {
     private scale?: ScaleLine;
     private attr?: Attribution;
     private fs?: FullScreen;
+
+    private custom = new Map<string, Control>();
 
     attach(map: OlMap, events?: Emitter<MapEventMap>, init?: ControlsInit) {
         this.map = map;
@@ -78,4 +82,44 @@ export class ControlsController {
 
     ensureFullScreen(map: OlMap) { if (this.fs) return; this.fs = new FullScreen(); map.addControl(this.fs); }
     removeFullScreen(map: OlMap) { if (!this.fs) return; map.removeControl(this.fs); this.fs = undefined; }
+
+    /** Add a custom OL control. Returns the resolved ID. */
+    adopt(control: Control, id?: string): string {
+        if (!this.map) throw new Error('ControlsController: map not attached');
+
+        // resolve id: explicit -> control.get('id') -> auto
+        const existingId = (control as unknown as BaseObject).get?.('id') as string | undefined;
+        const resolved = id ?? existingId ?? `custom:${Math.random().toString(36).slice(2, 10)}`;
+
+        // de-dup: if ID exists, remove old first
+        const old = this.custom.get(resolved);
+        if (old) this.map.removeControl(old);
+
+        // stamp id on the control so others can discover it later if needed
+        (control as unknown as BaseObject).set?.('id', resolved);
+
+        this.map.addControl(control);
+        this.custom.set(resolved, control);
+        return resolved;
+    }
+
+    /** Remove a custom control by id (no-op if not found). */
+    remove(id: string): boolean {
+        if (!this.map) return false;
+        const c = this.custom.get(id);
+        if (!c) return false;
+        this.map.removeControl(c);
+        this.custom.delete(id);
+        return true;
+    }
+
+    /** Get a custom control instance by id. */
+    get(id: string): Control | undefined {
+        return this.custom.get(id);
+    }
+
+    /** List all adopted custom control ids. */
+    listIds(): string[] {
+        return Array.from(this.custom.keys());
+    }
 }

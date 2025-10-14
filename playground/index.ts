@@ -158,13 +158,13 @@ map.addLayer({
             outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
             typeName: 'app:Fylke',
             srsName: 'EPSG:3857',
-            minZoomToLoad: 5,
+            minZoomToLoad: 1,
             strategy: 'bbox',            
         },
     },
     maxZoom: 18,
-    minZoom: 5,
-    style: { type: 'simple', options: { strokeColor: '#3399FF', strokeWidth: 2, fillColor: 'rgba(46, 46, 46, 0.1)' } },
+    minZoom: 1,
+    style: { type: 'simple', options: { strokeColor: '#9e7795', strokeWidth: 1.5, fillColor: 'rgba(46, 46, 46, 0.1)' } },
 })
 
 map.addLayer({

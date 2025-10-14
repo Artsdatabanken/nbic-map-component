@@ -7,6 +7,7 @@ import VectorSource from 'ol/source/Vector';
 import { Feature } from 'ol';
 import type { Geometry } from 'ol/geom';
 import type BaseLayer from 'ol/layer/Base';
+import type Control from 'ol/control/Control';
 
 export interface MapEngine {
     init(init: MapInit): Promise<void>;
@@ -25,7 +26,10 @@ export interface MapEngine {
     reorderLayers(order: string[]): void;
     setActiveBase(layerId: string): void;
     adoptLayer(id: string, layer: BaseLayer, opts?: AdoptLayerOptions): void;
-
+    adoptControl(control: Control, id?: string): string;
+    removeControl(id: string): boolean;
+    listCustomControlIds(): string[];
+    getCustomControl(id: string): Control | undefined;
     listLayerIds(): string[];
     listBaseLayerIds(): string[];
     listOverlayLayerIds(): string[];

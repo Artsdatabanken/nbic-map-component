@@ -218,6 +218,19 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             // events.emit('layer:removed', { layerId: id });
         },
 
+        adoptControl(control: Control, id?: string): string {
+            return controls.adopt(control, id);
+        },
+        removeControl(id: string): boolean {
+            return controls.remove(id);
+        },
+        listCustomControlIds(): string[] {
+            return controls.listIds();
+        },
+        getCustomControl(id: string): Control | undefined {
+            return controls.get(id);
+        },
+
         updateGeoJSONLayer(            
             layerId: string,
             geojson: string | object,

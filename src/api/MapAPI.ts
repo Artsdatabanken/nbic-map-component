@@ -19,6 +19,7 @@ import type { MapEventMap } from './events';
 import type { Extent } from 'ol/extent';
 import type { Geometry } from 'ol/geom';
 import type BaseLayer from 'ol/layer/Base';
+import type Control from 'ol/control/Control';
 export class MapAPI {
     private engine: MapEngine;
     private events: Emitter<MapEventMap>;
@@ -76,6 +77,19 @@ export class MapAPI {
     getLayerById(id: string): BaseLayer | null {
         return this.engine.getLayerById(id);
     }    
+
+    adoptControl(control: Control, id?: string) {
+        return this.engine.adoptControl(control, id);
+    }
+    removeControl(id: string) {
+        return this.engine.removeControl(id);
+    }
+    listCustomControlIds() {
+        return this.engine.listCustomControlIds();
+    }
+    getCustomControl(id: string) {
+        return this.engine.getCustomControl(id);
+    }
 
     setCenter(center: MapCoord) { this.engine.setCenter(center); }
     setZoom(zoom: number) { this.engine.setZoom(zoom); }
