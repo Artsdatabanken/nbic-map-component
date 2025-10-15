@@ -317,6 +317,7 @@ export interface LayerDef {
         distance?: number;      // px distance between points
         minDistance?: number;   // minimum distance
         style?: StyleDef;       // cluster style (circle + text etc.)
+        keepSingleAsCluster?: boolean; // default false
     };
 }
 

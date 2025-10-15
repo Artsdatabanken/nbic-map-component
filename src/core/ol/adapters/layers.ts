@@ -125,7 +125,7 @@ export function toOlLayer(
                     const size = members?.length ?? 0;
 
                     if (def.cluster?.enabled && members) {
-                        if (size === 1) {
+                        if (size === 1 && !def.cluster.keepSingleAsCluster) {
                             // Render as original feature style
                             const inner = members[0];
 
