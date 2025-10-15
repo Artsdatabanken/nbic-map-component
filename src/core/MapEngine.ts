@@ -8,6 +8,7 @@ import { Feature } from 'ol';
 import type { Geometry } from 'ol/geom';
 import type BaseLayer from 'ol/layer/Base';
 import type Control from 'ol/control/Control';
+import type { FeatureLike } from 'ol/Feature';
 
 export interface MapEngine {
     init(init: MapInit): Promise<void>;
@@ -36,6 +37,9 @@ export interface MapEngine {
     getLayerById(id: string): BaseLayer | null;
 
     ejectLayer(id: string): void;  // alias to removeLayer
+
+    getFeatureCount(layerId: string): number;
+    getFeatures(layerId: string): Feature<Geometry>[] | null;
 
     pickAt(pixel: [number, number]): HitResult | null;
 
@@ -67,7 +71,7 @@ export interface MapEngine {
     deactivateGeolocation(): void;  
     zoomToGeolocation(maxZoom?: number): Promise<boolean>;
 
-    getVectorLayerSource(layerId: string): VectorSource<Feature<Geometry>> | null;
+    getVectorLayerSource(layerId: string): VectorSource<FeatureLike> | null;
     addPoint(layerId: string, coord: MapCoord, properties?: Record<string, unknown>, style?: DrawStyleOptions, opts?: InsertGeomOptions): boolean;
     removeAllFromLayer(layerId: string): boolean;
 

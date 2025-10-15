@@ -7,6 +7,7 @@ import type { Geometry } from 'ol/geom';
 import type { Feature } from 'ol';
 import type { Extent } from 'ol/extent';
 import { getCenter } from 'ol/extent';
+import type { FeatureLike } from 'ol/Feature';
 
 export type ZoomOpts = {
     paddingPx?: number;   // padding on each side in px
@@ -17,7 +18,7 @@ export type ZoomOpts = {
 
 export interface LayerLookup {
     get(id: string): BaseLayer | undefined;                       // your LayerRegistry.get
-    getVectorSource(id: string): VectorSource<Feature<Geometry>> | null;
+    getVectorSource(id: string): VectorSource<FeatureLike> | null;
 }
 
 export class ZoomController {

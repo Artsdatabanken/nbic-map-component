@@ -218,6 +218,34 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             // events.emit('layer:removed', { layerId: id });
         },
 
+        getFeatureCount(layerId: string) {
+            const src = registry.getVectorSource(layerId);            
+            if (!src) return 0;            
+            // Normal vector source
+            const feats = src.getFeatures();
+            if (!feats.length) return 0;
+            // Cluster source → unwrap
+            if (src instanceof Cluster) {
+                const maybeCluster = src.getSource?.();
+                if (maybeCluster && typeof maybeCluster.getFeatures === 'function') {
+                    return maybeCluster.getFeatures().length;
+                }
+            }
+            return feats.length;
+        },
+
+        getFeatures(layerId: string) {
+            const src = registry.getVectorSource(layerId);
+            if (!src) return [];
+            if (src instanceof Cluster) {
+                const maybeCluster = src.getSource?.();
+                if (maybeCluster && typeof maybeCluster.getFeatures === 'function') {
+                    return maybeCluster.getFeatures();
+                }
+            }
+            return src.getFeatures();
+        },
+
         adoptControl(control: Control, id?: string): string {
             return controls.adopt(control, id);
         },

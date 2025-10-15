@@ -20,6 +20,7 @@ import type { Extent } from 'ol/extent';
 import type { Geometry } from 'ol/geom';
 import type BaseLayer from 'ol/layer/Base';
 import type Control from 'ol/control/Control';
+import { Feature } from 'ol';
 export class MapAPI {
     private engine: MapEngine;
     private events: Emitter<MapEventMap>;
@@ -106,6 +107,14 @@ export class MapAPI {
 
     adoptLayer(id: string, layer: BaseLayer, opts?: AdoptLayerOptions) { this.engine.adoptLayer(id, layer, opts); }
     ejectLayer(id: string) { this.engine.ejectLayer(id); this.layerDefs.delete(id); this.events.emit('layer:removed', { layerId: id }); }
+
+    getFeatureCount(layerId: string): number {
+        return this.engine.getFeatureCount(layerId);
+    }
+
+    getFeatures(layerId: string): Feature<Geometry>[] | null {
+        return this.engine.getFeatures(layerId);
+    }
 
     activateHoverInfo(options?: HoverInfoOptions) { this.engine.activateHoverInfo(options); }
     deactivateHoverInfo() { this.engine.deactivateHoverInfo(); }
