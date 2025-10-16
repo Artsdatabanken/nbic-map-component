@@ -311,7 +311,12 @@ export interface LayerDef {
     background?: string;
     minZoom?: number;
     maxZoom?: number;
-    opacity?: number;    
+    opacity?: number;
+    hover?: {
+        style?: DrawStyleOptions;   // style to use while hovering features of this layer
+        hitTolerance?: number;      // optional per-layer hit tolerance
+        clusterBehavior?: 'bubble' | 'unwrapSingle'; // for cluster layers
+    };    
     cluster?: {
         enabled: boolean;
         distance?: number;      // px distance between points

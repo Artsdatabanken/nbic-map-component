@@ -164,6 +164,11 @@ map.addLayer({
     },
     maxZoom: 18,
     minZoom: 1,
+    hover: {
+        style: { strokeColor: '#ff5a00', strokeWidth: 3, fillColor: 'rgba(255,90,0,0.12)' },
+        hitTolerance: 8,
+        clusterBehavior: 'unwrapSingle', // or 'bubble'
+    },
     style: { type: 'simple', options: { strokeColor: '#9e7795', strokeWidth: 1.5, fillColor: 'rgba(46, 46, 46, 0.1)' } },
 })
 
@@ -212,9 +217,14 @@ map.addLayer({
     kind: 'vector',
     visible: true,
     source: { type: 'geojson', options: { dataProjection: 'EPSG:25833', featureProjection: 'EPSG:3857', text: '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[382213.9958160136,7192693.298516899]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[379010.216936343,7194929.561227733]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385966.8490689363,7195614.040144959]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[380955.9861982096,7196607.205632699]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385085.8247894216,7197926.356068817]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7149304.194866324]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[404805.37905920955,7149328.949441544]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[409912.57599976804,7151959.794116425]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7153948.212827165]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[403836.96814668947,7156195.21246219]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}}]}' } },
+    hover: {
+        style: { strokeColor: 'yellow', strokeWidth: 4, fillColor: 'transparent', pointRadius: 14 },
+        hitTolerance: 8,
+        clusterBehavior: 'unwrapSingle', // or 'bubble'
+    },
     cluster: {
         enabled: true,
-        distance: 50,
+        distance: 20,
         style: {
             type: 'simple',
             options: {

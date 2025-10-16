@@ -225,6 +225,14 @@ export function toOlLayer(
 
     layer.set('id', def.id);
 
+    // expose hover config to the controller    
+    if (def.hover?.style) layer.set('nbic:hoverStyle', def.hover.style);
+    if (def.hover?.hitTolerance != null) layer.set('nbic:hoverHitTol', def.hover.hitTolerance);
+    if (def.hover?.clusterBehavior) layer.set('nbic:hoverClusterBehavior', def.hover.clusterBehavior);
+
+    // keepSingleAsCluster you already have:
+    if (def.cluster?.keepSingleAsCluster) layer.set('nbic:keepSingleAsCluster', true);
+
     // ✨ render gates
     if (def.minZoom !== undefined && 'setMinZoom' in layer) (layer as TileLayer | VectorLayer).setMinZoom(def.minZoom);
     if (def.maxZoom !== undefined && 'setMaxZoom' in layer) (layer as TileLayer | VectorLayer).setMaxZoom(def.maxZoom);
