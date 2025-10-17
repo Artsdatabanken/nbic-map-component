@@ -164,6 +164,7 @@ map.addLayer({
     },
     maxZoom: 18,
     minZoom: 1,
+    pickable: false,
     hover: {
         style: { strokeColor: '#ff5a00', strokeWidth: 3, fillColor: 'rgba(255,90,0,0.12)' },
         hitTolerance: 8,
@@ -225,6 +226,7 @@ map.addLayer({
     cluster: {
         enabled: true,
         distance: 20,
+        keepSingleAsCluster: true,
         style: {
             type: 'simple',
             options: {

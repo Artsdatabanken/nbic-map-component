@@ -166,6 +166,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         addLayer(def: LayerDef) {
             const layer = toOlLayer(def);
             layer.set('id', def.id);
+            layer.set('nbic:pickable', def?.pickable !== false); // default true
             map!.addLayer(layer);
             registry.add(def.id, layer);
 

@@ -312,6 +312,7 @@ export interface LayerDef {
     minZoom?: number;
     maxZoom?: number;
     opacity?: number;
+    pickable?: boolean;              // default true (respected by isPickableLayer)
     hover?: {
         style?: DrawStyleOptions;   // style to use while hovering features of this layer
         hitTolerance?: number;      // optional per-layer hit tolerance
@@ -323,6 +324,7 @@ export interface LayerDef {
         minDistance?: number;   // minimum distance
         style?: StyleDef;       // cluster style (circle + text etc.)
         keepSingleAsCluster?: boolean; // default false
+        countField?: string; // <-- default 'count'
     };
 }
 
