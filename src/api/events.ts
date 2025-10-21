@@ -52,6 +52,11 @@ export const MapEvents = {
     BaseChanged: 'base:changed',
     HoverInfo: 'hover:info',
     Error: 'error',
+    DrawStart: 'draw:start',
+    DrawEnd: 'draw:end',
+    DrawImported: 'draw:imported',
+    DrawCleared: 'draw:cleared',
+    EditModified: 'edit:modified',
 } as const;
 
 // Type helpers
