@@ -244,6 +244,10 @@ map.on('pointer:click', (event) => {
 map.on('ready', () => {
     console.log('Map ready');
 });
+
+map.once('draw:end', (event) => {
+    console.log('Draw ended:', event);
+});
     
 
 // function updateGeojson(): void {    

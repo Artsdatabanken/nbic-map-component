@@ -42,7 +42,11 @@ export class MapAPI {
     }
     off<K extends keyof MapEventMap>(type: K, cb: (payload: MapEventMap[K]) => void) {
         return this.events.off(type, cb);
-    }    
+    }
+
+    once<K extends keyof MapEventMap>(type: K, cb: (payload: MapEventMap[K]) => void) {
+        return this.events.once(type, cb);
+    }
 
     destroy() {
         this.engine.destroy();
