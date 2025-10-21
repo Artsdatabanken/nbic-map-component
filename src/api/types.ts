@@ -1,7 +1,7 @@
 // src/api/types.ts
 import type { Extent } from 'ol/extent';
 export type MapCoord = [number, number];         // EPSG:3857 by default (configurable)
-export type DrawKind = 'Point' | 'LineString' | 'Polygon' | 'Circle' | 'Text';
+export type DrawKind = 'Point' | 'LineString' | 'Polygon' | 'Circle' | 'Text' | 'Box';
 
 export interface ControlInit {
     fullscreen?: boolean;       // show FullScreen button

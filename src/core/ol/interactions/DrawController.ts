@@ -2,7 +2,7 @@
 import type OlMap from 'ol/Map';
 import VectorSource from 'ol/source/Vector';
 import VectorLayer from 'ol/layer/Vector';
-import Draw from 'ol/interaction/Draw';
+import Draw, { createBox, /* createRegularPolygon, */ type GeometryFunction } from 'ol/interaction/Draw';
 import Modify from 'ol/interaction/Modify';
 import Snap from 'ol/interaction/Snap';
 import GeoJSON from 'ol/format/GeoJSON';
@@ -21,6 +21,20 @@ import type { EventsKey } from 'ol/events';
 import type { DrawOptions, DrawStyleOptions, DrawExportOptions, DrawImportOptions } from '../../../api/types';
 import type { Feature as GJFeature, Geometry as GJGeometry } from 'geojson';
 import buffer from '@turf/buffer';
+
+function mapKindToDraw(
+    kind: import('../../../api/types').DrawKind
+): { type: 'Point' | 'LineString' | 'Polygon' | 'Circle'; geometryFunction?: GeometryFunction } {
+    switch (kind) {
+        case 'Point': return { type: 'Point' };
+        case 'LineString': return { type: 'LineString' };
+        case 'Polygon': return { type: 'Polygon' };
+        case 'Circle': return { type: 'Circle' };
+        case 'Text': return { type: 'Point' };
+        case 'Box': return { type: 'Circle', geometryFunction: createBox() };
+        // case 'Square':  return { type: 'Circle', geometryFunction: createRegularPolygon(4) };
+    }
+}
 
 export class DrawController {
     private map?: OlMap;
@@ -91,6 +105,7 @@ export class DrawController {
     // ————— public API —————
     async start(opts: DrawOptions) {        
         if (!this.map) return;
+        const drawParams = mapKindToDraw(opts.kind);
         this.ensureLayer();
         this.stop(); // remove old interactions first
 
@@ -102,11 +117,11 @@ export class DrawController {
         this.map.addInteraction(this.modify);
         this.modify.setActive(false);
 
-        // 2) Draw
-        const olType = opts.kind === 'Text' ? 'Point' : opts.kind;
+        // 2) Draw        
         this.draw = new Draw({
             source: this.source!,
-            type: olType as 'Point' | 'LineString' | 'Polygon' | 'Circle',
+            type: drawParams.type,
+            geometryFunction: drawParams.geometryFunction,
             style: this.currentDrawStyle,
         });
         this.map.addInteraction(this.draw);
