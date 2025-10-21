@@ -48,10 +48,10 @@ export function toOlLayer(
     sourceFn = resolveOlSource,
     styleFn = toOlStyle
 ): BaseLayer {
-    const src = typeof def.source === 'string'
-        ? sourceFn({ ref: def.source })
-        : sourceFn(def.source as SourceDef);
-
+    // const src = typeof def.source === 'string'
+    //     ? sourceFn({ ref: def.source })
+    //     : sourceFn(def.source as SourceDef);
+    const src = sourceFn(def.source as SourceDef);
     let layer: BaseLayer;
     
     switch (def.kind) {

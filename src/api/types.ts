@@ -288,9 +288,9 @@ export type SourceDef =
     ;
 
 // explicit “reference by id”
-export type SourceRef = { ref: string };
+// export type SourceRef = { ref: string };
 
-export type SourceInput = SourceDef | SourceRef;
+export type SourceInput = SourceDef //| SourceRef;
 
 export interface AdoptLayerOptions {
     base?: 'regional' | 'super';     // if you ever want to adopt a base
@@ -302,6 +302,7 @@ export interface AdoptLayerOptions {
 // ---- layer def ----
 export interface LayerDef {
     id: string;
+    name?: string;
     kind: 'tile' | 'raster' | 'vector';
     source: SourceInput;
     style?: StyleDef;
