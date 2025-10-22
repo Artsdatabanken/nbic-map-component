@@ -248,6 +248,10 @@ map.on('ready', () => {
 map.once('draw:end', (event) => {
     console.log('Draw ended:', event);
 });
+
+map.on('draw:vertex', (event) => {
+    console.log('Draw vertex:', event);
+});
     
 
 // function updateGeojson(): void {    

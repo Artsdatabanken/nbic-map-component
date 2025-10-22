@@ -131,6 +131,11 @@ export class MapAPI {
     enableDrawEditing() { this.engine.enableDrawEditing(); }
     disableDrawEditing() { this.engine.disableDrawEditing(); }
 
+    undoLastPoint() { this.engine.undoLastPoint(); }
+
+    finishCurrent() { this.engine.finishCurrent(); }
+    abortCurrent() { this.engine.abortCurrent(); }
+
     clearDrawn() { this.engine.clearDrawn(); }
 
     exportDrawnGeoJSON(opts?: DrawExportOptions) { return this.engine.exportDrawnGeoJSON(opts); }

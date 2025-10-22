@@ -50,6 +50,9 @@ export interface MapEngine {
     stopDrawing(): void;
     enableDrawEditing(): void;
     disableDrawEditing(): void;
+    undoLastPoint(): void;
+    finishCurrent(): void;
+    abortCurrent(): void;
     clearDrawn(): void;
 
     exportDrawnGeoJSON(opts?: DrawExportOptions): string;

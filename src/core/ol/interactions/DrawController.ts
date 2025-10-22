@@ -21,6 +21,8 @@ import type { EventsKey } from 'ol/events';
 import type { DrawOptions, DrawStyleOptions, DrawExportOptions, DrawImportOptions } from '../../../api/types';
 import type { Feature as GJFeature, Geometry as GJGeometry } from 'geojson';
 import buffer from '@turf/buffer';
+import LineString from 'ol/geom/LineString';
+import Polygon from 'ol/geom/Polygon';
 
 function mapKindToDraw(
     kind: import('../../../api/types').DrawKind
@@ -34,6 +36,55 @@ function mapKindToDraw(
         case 'Box': return { type: 'Circle', geometryFunction: createBox() };
         // case 'Square':  return { type: 'Circle', geometryFunction: createRegularPolygon(4) };
     }
+}
+
+function vertexCount(geom: Geometry): number {
+    if (geom instanceof Point) return 1;
+
+    if (geom instanceof LineString) {
+        const coords = geom.getCoordinates();              // number[][]
+        return coords.length;
+    }
+
+    if (geom instanceof Polygon) {
+        const rings = geom.getCoordinates();               // number[][][]
+        if (rings.length === 0) return 0;
+        const firstRing = rings[0];
+        if (!firstRing) return 0;
+        // first ring; last coord duplicates the first → exclude it
+        return Math.max(0, firstRing.length - 1);
+    }
+
+    return 0; // other geometry types not counted
+}
+
+function lastVertex(geom: Geometry): [number, number] | null {
+    if (geom instanceof Point) {
+        const c = geom.getCoordinates();                   // number[]
+        if (!Array.isArray(c) || c.length < 2) return null;
+        return [c[0] as number, c[1] as number];
+    }
+
+    if (geom instanceof LineString) {
+        const coords = geom.getCoordinates();              // number[][]
+        if (!Array.isArray(coords) || coords.length === 0) return null;
+        const last = coords[coords.length - 1];
+        if (!Array.isArray(last) || last.length < 2) return null;
+        return [last[0] as number, last[1] as number];
+    }
+
+    if (geom instanceof Polygon) {
+        const rings = geom.getCoordinates();               // number[][][]
+        if (!Array.isArray(rings) || rings.length === 0) return null;
+        const ring = rings[0];
+        // exclude the closing point (last is a repeat of the first)
+        if (!Array.isArray(ring) || ring.length <= 1) return null;
+        const last = ring[ring.length - 2];
+        if (!Array.isArray(last) || last.length < 2) return null;
+        return [last[0] as number, last[1] as number];
+    }
+
+    return null;
 }
 
 export class DrawController {
@@ -134,7 +185,69 @@ export class DrawController {
         }
 
         // Events
-        this.draw.on('drawstart', () => this.events.emit('draw:start', { kind: opts.kind }));
+        // this.draw.on('drawstart', () => this.events.emit('draw:start', { kind: opts.kind }));
+        let keyHandler: ((ev: KeyboardEvent) => void) | null = null;
+
+        this.draw.on('drawstart', (e) => {
+            const sketch = e.feature as OlFeature<Geometry>;
+            const geom = sketch.getGeometry();
+            if (!geom) return;
+
+            // emit vertex on growth
+            let lastLen = vertexCount(geom);
+
+            const changeKey: EventsKey = geom.on('change', () => {
+                const len = vertexCount(geom);
+
+                if (len > lastLen) {
+                    const coord = lastVertex(geom);
+                    if (coord) {
+                        this.events.emit('draw:vertex', {
+                            kind: opts.kind,
+                            index: len - 1,                // 0-based, correct for lines/polygons
+                            coordinate: coord,             // MapCoord
+                        });
+                    }
+                } else if (len < lastLen) {
+                    // optional: notify removals (works with undoLastPoint)
+                    // this.events.emit('draw:vertexRemoved', {
+                    //     kind: opts.kind,
+                    //     index: len,                      // new last index after removal
+                    // });
+                }
+
+                lastLen = len;                       // keep in sync after both add/remove
+            });
+
+            // keyboard helpers while sketching
+            keyHandler = (ev: KeyboardEvent) => {
+                const ctrlZ = (ev.key === 'z' || ev.key === 'Z') && (ev.ctrlKey || ev.metaKey);
+                if (ev.key === 'Backspace' || ctrlZ) {
+                    ev.preventDefault();
+                    this.draw?.removeLastPoint();
+                } else if (ev.key === 'Enter') {
+                    ev.preventDefault();
+                    this.draw?.finishDrawing();
+                } else if (ev.key === 'Escape') {
+                    ev.preventDefault();
+                    // abort if available; otherwise just finish and undo later
+                    (this.draw as Draw).abortDrawing?.();
+                }
+            };
+            window.addEventListener('keydown', keyHandler);
+
+            const detachPerSketch = () => {
+                unByKey(changeKey);
+                if (keyHandler) {
+                    window.removeEventListener('keydown', keyHandler);
+                    keyHandler = null;
+                }
+            };
+
+            this.draw!.once('drawend', detachPerSketch);
+            // drawabort exists on OL Draw; if your types don’t include it, you can omit this line safely
+            this.draw!.once('drawabort' as unknown as 'drawend', detachPerSketch);
+        });
 
         this.draw.on('drawend', async (e) => {
             const f = e.feature as OlFeature<Geometry>;
@@ -275,6 +388,18 @@ export class DrawController {
             this.map.removeInteraction(this.snap);
             this.snap = undefined;
         }
+    }
+
+    undoLastPoint() {
+        this.draw?.removeLastPoint();
+    }
+
+    finishCurrent() {
+        this.draw?.finishDrawing();
+    }
+
+    abortCurrent() {
+        this.draw?.abortDrawing();
     }
 
     enableEditing() {

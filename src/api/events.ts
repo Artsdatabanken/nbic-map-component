@@ -26,6 +26,7 @@ export type MapEventMap = {
     'draw:end': { feature: Feature<Geometry> };
     'draw:imported': { count: number };
     'draw:cleared': { count: number };
+    'draw:vertex': { kind: string; index: number; coordinate: MapCoord };
     'edit:modified': { count: number };
     'geo:position': { coordinate: MapCoord; accuracy?: number } | null;
     'geo:error': { message: string };
@@ -56,7 +57,16 @@ export const MapEvents = {
     DrawEnd: 'draw:end',
     DrawImported: 'draw:imported',
     DrawCleared: 'draw:cleared',
-    EditModified: 'edit:modified',
+    DrawVertex: 'draw:vertex',
+    GeoPosition: 'geo:position',
+    GeoError: 'geo:error',
+    FullscreenChange: 'fullscreen:change',
+    ScaleLineControl: 'controls:scaleline',
+    ZoomControl: 'controls:zoom',
+    AttributionControl: 'controls:attribution',
+    BufferCreated: 'buffer:created',
+    BufferInteractiveStart: 'buffer:interactive:start',
+    EditModified: 'edit:modified',    
 } as const;
 
 // Type helpers
