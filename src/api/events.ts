@@ -27,6 +27,7 @@ export type MapEventMap = {
     'draw:imported': { count: number };
     'draw:cleared': { count: number };
     'draw:vertex': { kind: string; index: number; coordinate: MapCoord };
+    'draw:vertexRemoved': { kind: string; index: number; };
     'edit:modified': { count: number };
     'geo:position': { coordinate: MapCoord; accuracy?: number } | null;
     'geo:error': { message: string };
@@ -58,6 +59,7 @@ export const MapEvents = {
     DrawImported: 'draw:imported',
     DrawCleared: 'draw:cleared',
     DrawVertex: 'draw:vertex',
+    DrawVertexRemoved: 'draw:vertexRemoved',
     GeoPosition: 'geo:position',
     GeoError: 'geo:error',
     FullscreenChange: 'fullscreen:change',

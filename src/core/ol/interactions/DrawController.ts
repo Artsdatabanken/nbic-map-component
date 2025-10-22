@@ -189,6 +189,7 @@ export class DrawController {
         let keyHandler: ((ev: KeyboardEvent) => void) | null = null;
 
         this.draw.on('drawstart', (e) => {
+            this.events.emit('draw:start', { kind: opts.kind });
             const sketch = e.feature as OlFeature<Geometry>;
             const geom = sketch.getGeometry();
             if (!geom) return;
@@ -210,10 +211,10 @@ export class DrawController {
                     }
                 } else if (len < lastLen) {
                     // optional: notify removals (works with undoLastPoint)
-                    // this.events.emit('draw:vertexRemoved', {
-                    //     kind: opts.kind,
-                    //     index: len,                      // new last index after removal
-                    // });
+                    this.events.emit('draw:vertexRemoved', {
+                        kind: opts.kind,
+                        index: len,                      // new last index after removal
+                    });
                 }
 
                 lastLen = len;                       // keep in sync after both add/remove
