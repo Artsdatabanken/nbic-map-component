@@ -481,6 +481,13 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             return true;
         },
 
+        // geometry analysis
+        analyzeSelfIntersections: async (feature: OlFeature<Geometry>) => {
+            if (!map) return { valid: true };
+            const { checkSelfIntersections } = await import('./utils/geometry-analysis');
+            return checkSelfIntersections(map, feature);
+        },
+
         // full-screen
         enterFullScreen() {
             if (!map) return;

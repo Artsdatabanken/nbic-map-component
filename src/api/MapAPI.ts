@@ -21,6 +21,8 @@ import type { Geometry } from 'ol/geom';
 import type BaseLayer from 'ol/layer/Base';
 import type Control from 'ol/control/Control';
 import { Feature } from 'ol';
+import type { FeatureLike } from 'ol/Feature';
+
 export class MapAPI {
     private engine: MapEngine;
     private events: Emitter<MapEventMap>;
@@ -156,6 +158,11 @@ export class MapAPI {
     exportDrawnGeoJSON(opts?: DrawExportOptions) { return this.engine.exportDrawnGeoJSON(opts); }
     importDrawnGeoJSON(text: string, opts?: DrawImportOptions) { this.engine.importDrawnGeoJSON(text, opts); }
 
+    // Geometry analysis
+    analyzeSelfIntersections(feature: FeatureLike) {            
+        return this.engine.analyzeSelfIntersections(feature);
+    }
+    
     enterFullScreen() { this.engine.enterFullScreen(); }
     leaveFullScreen() { this.engine.leaveFullScreen(); }
     showScaleLine() { this.engine.showScaleLine(); }

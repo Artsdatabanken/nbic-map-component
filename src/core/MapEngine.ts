@@ -41,6 +41,9 @@ export interface MapEngine {
     getFeatureCount(layerId: string): number;
     getFeatures(layerId: string): Feature<Geometry>[] | null;
 
+    // geometry analysis
+    analyzeSelfIntersections(feature: FeatureLike): Promise<{ valid: boolean; intersections?: unknown }>;
+
     pickAt(pixel: [number, number]): HitResult | null;
 
     activateHoverInfo(options?: HoverInfoOptions): void;

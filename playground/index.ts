@@ -253,6 +253,7 @@ map.once('draw:end', (event) => {
         strokeWidth: 4,
         fillColor: 'rgba(0,255,0,0.2)',
     });
+    map.analyzeSelfIntersections(drawnFeature).then((result) => {console.log('Self-intersection analysis:', result); });
 });
 
 map.on('draw:vertex', (event) => {
