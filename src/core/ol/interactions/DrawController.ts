@@ -24,6 +24,12 @@ import buffer from '@turf/buffer';
 import LineString from 'ol/geom/LineString';
 import Polygon from 'ol/geom/Polygon';
 
+// let featureCounter = 0;
+// function nextFeatureId(): string {
+//     featureCounter += 1;
+//     return `draw-${Date.now()}-${featureCounter}`;
+// }
+
 function mapKindToDraw(
     kind: import('../../../api/types').DrawKind
 ): { type: 'Point' | 'LineString' | 'Polygon' | 'Circle'; geometryFunction?: GeometryFunction } {
@@ -251,7 +257,10 @@ export class DrawController {
         });
 
         this.draw.on('drawend', async (e) => {
-            const f = e.feature as OlFeature<Geometry>;
+            const f = e.feature as OlFeature<Geometry>;            
+            if (!f.getId()) {
+                f.setId(crypto.randomUUID());
+            }
             this.setStyle(f, opts.style);
             this.modify?.setActive(true);
 
@@ -456,5 +465,15 @@ export class DrawController {
         }
         this.source!.addFeatures(features);
         this.events.emit('draw:imported', { count: features.length });
+    }
+
+    setFeatureStyle(feature: OlFeature<Geometry>, style: DrawStyleOptions): void {
+        feature.set('nbic:style', style);          // keep style in properties for export/restore
+        feature.setStyle(makeDrawStyle(style));     // apply OL Style right away
+    }
+
+    clearFeatureStyle(feature: OlFeature<Geometry>): void {
+        feature.unset('nbic:style', true);
+        feature.setStyle(undefined); // OL will fall back to the layer style function
     }
 }

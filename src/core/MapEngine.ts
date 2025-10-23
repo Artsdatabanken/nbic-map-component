@@ -47,6 +47,7 @@ export interface MapEngine {
     deactivateHoverInfo(): void;
 
     startDrawing(opts: DrawOptions): void;
+
     stopDrawing(): void;
     enableDrawEditing(): void;
     disableDrawEditing(): void;
@@ -54,6 +55,10 @@ export interface MapEngine {
     finishCurrent(): void;
     abortCurrent(): void;
     clearDrawn(): void;
+    setDrawnFeatureStyle(feature: Feature<Geometry>, style: DrawStyleOptions): void;
+    clearDrawnFeatureStyle(feature: Feature<Geometry>): void;
+    setFeatureStyle(layerId: string, featureId: string | number, style: DrawStyleOptions): boolean;
+    clearFeatureStyle(layerId: string, featureId: string | number): boolean;
 
     exportDrawnGeoJSON(opts?: DrawExportOptions): string;
     importDrawnGeoJSON(geojson: string, opts?: DrawImportOptions): void;

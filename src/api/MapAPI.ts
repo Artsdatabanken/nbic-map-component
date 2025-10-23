@@ -131,6 +131,21 @@ export class MapAPI {
     enableDrawEditing() { this.engine.enableDrawEditing(); }
     disableDrawEditing() { this.engine.disableDrawEditing(); }
 
+    setDrawnFeatureStyle(feature: Feature<Geometry>, style: DrawStyleOptions) {
+        return this.engine.setDrawnFeatureStyle(feature, style);
+    }
+
+    clearDrawnFeatureStyle(feature: Feature<Geometry>) {
+        return this.engine.clearDrawnFeatureStyle(feature);
+    }
+
+    setFeatureStyle(layerId: string, featureId: string | number, style: DrawStyleOptions) {
+        return this.engine.setFeatureStyle(layerId, featureId, style);
+    }
+    clearFeatureStyle(layerId: string, featureId: string | number) {
+        return this.engine.clearFeatureStyle(layerId, featureId);
+    }
+
     undoLastPoint() { this.engine.undoLastPoint(); }
 
     finishCurrent() { this.engine.finishCurrent(); }

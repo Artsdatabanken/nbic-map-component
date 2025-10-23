@@ -247,6 +247,12 @@ map.on('ready', () => {
 
 map.once('draw:end', (event) => {
     console.log('Draw ended:', event);
+    const drawnFeature = event.feature;
+    map.setDrawnFeatureStyle(drawnFeature, {
+        strokeColor: '#00ff00',
+        strokeWidth: 4,
+        fillColor: 'rgba(0,255,0,0.2)',
+    });
 });
 
 map.on('draw:vertex', (event) => {

@@ -31,9 +31,20 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import type { Feature as OlFeature } from 'ol';
 import Cluster from 'ol/source/Cluster';
+import { makeDrawStyle } from './adapters/draw-style';
 
 import { isPickableLayer } from './utils/picking';
 import { toViewCoord } from './utils/coords';
+
+function resolveVectorSource(layer: VectorLayer<VectorSource<OlFeature<Geometry>>>): VectorSource<OlFeature<Geometry>> | null {
+    const src = layer.getSource();
+    if (!src) return null;
+    if (src instanceof Cluster) {
+        const inner = src.getSource();
+        return (inner as VectorSource<OlFeature<Geometry>>) ?? null;
+    }
+    return src as VectorSource<OlFeature<Geometry>>;
+}
 
 export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     let map: OlMap | undefined;        
@@ -438,6 +449,37 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         clearDrawn: () => draw.clear(),
         exportDrawnGeoJSON: (opts) => draw.exportGeoJSON(map!, opts),
         importDrawnGeoJSON: (geojson, opts) => draw.importGeoJSON(map!, geojson, opts),
+        setDrawnFeatureStyle: (feature, style) => draw.setFeatureStyle(feature, style),
+        clearDrawnFeatureStyle: (feature) => draw.clearFeatureStyle(feature),
+        setFeatureStyle(layerId: string, featureId: string | number, style: DrawStyleOptions): boolean {
+            const layer = registry.get(layerId) as VectorLayer<VectorSource<OlFeature<Geometry>>> | undefined;
+            if (!layer) return false;
+
+            const src = resolveVectorSource(layer);
+            if (!src) return false;
+
+            const feat = src.getFeatureById(featureId) as OlFeature<Geometry> | null;
+            if (!feat) return false;
+
+            feat.set('nbic:style', style);
+            feat.setStyle(makeDrawStyle(style));
+            return true;
+        },
+
+        clearFeatureStyle(layerId: string, featureId: string | number): boolean {
+            const layer = registry.get(layerId) as VectorLayer<VectorSource<OlFeature<Geometry>>> | undefined;
+            if (!layer) return false;
+
+            const src = resolveVectorSource(layer);
+            if (!src) return false;
+
+            const feat = src.getFeatureById(featureId) as OlFeature<Geometry> | null;
+            if (!feat) return false;
+
+            feat.unset('nbic:style', true);
+            feat.setStyle(undefined); // fallback to layer style
+            return true;
+        },
 
         // full-screen
         enterFullScreen() {
