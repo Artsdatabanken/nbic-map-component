@@ -18,11 +18,15 @@ import { unByKey } from 'ol/Observable';
 import { listen } from 'ol/events';
 import type { EventsKey } from 'ol/events';
 
-import type { DrawOptions, DrawStyleOptions, DrawExportOptions, DrawImportOptions } from '../../../api/types';
+import type { DrawOptions, DrawStyleOptions, DrawExportOptions, DrawImportOptions, EnableEditingOptions } from '../../../api/types';
 import type { Feature as GJFeature, Geometry as GJGeometry } from 'geojson';
 import buffer from '@turf/buffer';
-import LineString from 'ol/geom/LineString';
-import Polygon from 'ol/geom/Polygon';
+// import LineString from 'ol/geom/LineString';
+// import Polygon from 'ol/geom/Polygon';
+import type { StyleLike } from 'ol/style/Style';
+import { Style, Circle as CircleStyle, Fill, Stroke } from 'ol/style';
+import { LineString, Polygon, MultiLineString, MultiPolygon } from 'ol/geom';
+import type { Coordinate } from 'ol/coordinate';
 
 // let featureCounter = 0;
 // function nextFeatureId(): string {
@@ -93,6 +97,34 @@ function lastVertex(geom: Geometry): [number, number] | null {
     return null;
 }
 
+// simple helpers (avoid .flat() to keep TS/lib happy)
+function flattenOnce<T>(arr: T[][]): T[] {
+    const out: T[] = [];
+    for (const a of arr) out.push(...a);
+    return out;
+}
+function flattenTwice<T>(arr: T[][][]): T[] {
+    const out: T[] = [];
+    for (const a of arr) for (const b of a) out.push(...b);
+    return out;
+}
+
+// function makeVertexStyle(opts?: DrawStyleOptions): StyleLike {
+//     // Defaults for the vertex handles
+//     const strokeColor = opts?.strokeColor ?? '#1976d2';
+//     const strokeWidth = opts?.strokeWidth ?? 2;
+//     const fillColor = opts?.fillColor ?? '#ffffff';
+//     const radius = opts?.pointRadius ?? 5;
+
+//     return new Style({
+//         image: new CircleStyle({
+//             radius,
+//             fill: new Fill({ color: fillColor }),
+//             stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
+//         }),
+//     });
+// }
+
 export class DrawController {
     private map?: OlMap;
     private source?: VectorSource<OlFeature<Geometry>>;
@@ -102,6 +134,8 @@ export class DrawController {
     private snap?: Snap;
     private fmt = new GeoJSON();
     private currentDrawStyle = makeDrawStyle(undefined);
+    private vertexLayer?: VectorLayer<VectorSource<OlFeature<Point>>>;
+    private vertexSrc?: VectorSource<OlFeature<Point>>;
 
     constructor(private events: Emitter<MapEventMap>) { }
 
@@ -129,6 +163,87 @@ export class DrawController {
         if (!s) return;
         f.set('nbic:style', s);
         f.setStyle(makeDrawStyle(s));
+    }
+
+    private makeVertexStyle(opts?: DrawStyleOptions): StyleLike {
+        const strokeColor = opts?.strokeColor ?? '#1976d2';
+        const strokeWidth = opts?.strokeWidth ?? 2;
+        const fillColor = opts?.fillColor ?? '#ffffff';
+        const radius = opts?.pointRadius ?? 5;
+
+        return new Style({
+            image: new CircleStyle({
+                radius,
+                fill: new Fill({ color: fillColor }),
+                stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
+            }),
+        });
+    }
+
+    private ensureVertexLayer(styleOpts?: DrawStyleOptions) {
+        if (!this.map || this.vertexLayer) return;
+        this.vertexSrc = new VectorSource<OlFeature<Point>>();
+        this.vertexLayer = new VectorLayer({
+            source: this.vertexSrc,
+            properties: { 'nbic:role': 'draw-vertices' },
+            zIndex: 9001,
+            style: this.makeVertexStyle(styleOpts),
+            updateWhileInteracting: true,
+        });
+        this.map.addLayer(this.vertexLayer);
+    }
+
+    private destroyVertexLayer() {
+        if (this.vertexLayer && this.map) this.map.removeLayer(this.vertexLayer);
+        this.vertexLayer = undefined;
+        this.vertexSrc = undefined;
+    }
+
+
+
+    private verticesOfGeometry(g: Geometry): Coordinate[] {
+        if (g instanceof LineString) {
+            return g.getCoordinates() as Coordinate[];
+        }
+        if (g instanceof Polygon) {
+            // rings: Coordinate[][]
+            const rings = g.getCoordinates() as Coordinate[][];
+            return flattenOnce(rings);
+        }
+        if (g instanceof MultiLineString) {
+            // lines: Coordinate[][]
+            const lines = g.getCoordinates() as Coordinate[][];
+            return flattenOnce(lines);
+        }
+        if (g instanceof MultiPolygon) {
+            // polygons: Coordinate[][][]
+            const polys = g.getCoordinates() as Coordinate[][][];
+            return flattenTwice(polys);
+        }
+
+        // For Point/Circle or unsupported geometries: no vertices (adjust if you want to show center, etc.)
+        return [];
+    }
+
+    private rebuildVertexOverlay() {
+        if (!this.vertexSrc || !this.source) return;
+        this.vertexSrc.clear(true);
+        const feats = this.source.getFeatures();
+        for (const f of feats) {
+            const g = f.getGeometry();
+            if (!g) continue;
+            const verts = this.verticesOfGeometry(g);
+            for (let i = 0; i < verts.length; i++) {
+                const coord = verts[i];
+                if (!coord) continue;
+                const v = new Feature<Point>({ geometry: new Point(coord) });
+                // optionally carry parent id / index:
+                const pid = f.getId();
+                if (pid != null) v.set('nbic:parentId', pid);
+                v.set('nbic:vertexIndex', i);
+                this.vertexSrc.addFeature(v);
+            }
+        }
     }
 
     createPointFeature(coord: [number, number], props?: Record<string, unknown>, style?: DrawStyleOptions) {
@@ -381,6 +496,7 @@ export class DrawController {
 
             // normal end
             this.events.emit('draw:end', { feature: f });
+            if (this.vertexLayer) this.rebuildVertexOverlay();
         });
     }
 
@@ -412,19 +528,70 @@ export class DrawController {
         this.draw?.abortDrawing();
     }
 
-    enableEditing() {
+    // enableEditing() {
+    //     if (!this.map) return;
+    //     this.ensureLayer();
+    //     if (!this.modify) {
+    //         this.modify = new Modify({ source: this.source! });
+    //         this.map.addInteraction(this.modify);
+    //         this.modify.on('modifyend', (e) => this.events.emit('edit:modified', { count: e.features.getLength() }));
+    //     }
+    //     if (!this.snap) {
+    //         this.snap = new Snap({ source: this.source! });
+    //         this.map.addInteraction(this.snap);
+    //     }
+    // }
+
+    enableEditing(options?: boolean | EnableEditingOptions) {
         if (!this.map) return;
         this.ensureLayer();
-        if (!this.modify) {
-            this.modify = new Modify({ source: this.source! });
-            this.map.addInteraction(this.modify);
-            this.modify.on('modifyend', (e) => this.events.emit('edit:modified', { count: e.features.getLength() }));
+
+        // normalize options
+        let showHandles = true;               // Modify hover handles
+        let persistent = false;              // persistent markers
+        let vertexStyleOpts: DrawStyleOptions | undefined;
+
+        if (typeof options === 'boolean') {
+            showHandles = options;
+        } else if (options) {
+            showHandles = options.showVertices !== false; // default true
+            persistent = !!options.showVerticesPersistent;
+            vertexStyleOpts = options.vertexStyle;
         }
+
+        // (Re)create Modify with desired handle style (or hidden)
+        if (this.modify) {
+            this.map.removeInteraction(this.modify);
+            this.modify = undefined;
+        }
+        const modifyStyle: StyleLike | undefined = showHandles ? this.makeVertexStyle(vertexStyleOpts) : () => undefined;
+        this.modify = new Modify({ source: this.source!, style: modifyStyle });
+        this.map.addInteraction(this.modify);
+        this.modify.on('modifyend', (e) => {
+            this.events.emit('edit:modified', { count: e.features.getLength() });
+            if (persistent) this.rebuildVertexOverlay();
+        });
+
+        // Snap as before
         if (!this.snap) {
             this.snap = new Snap({ source: this.source! });
             this.map.addInteraction(this.snap);
         }
+
+        // Persistent vertex overlay toggle
+        if (persistent) {
+            this.ensureVertexLayer(vertexStyleOpts);
+            // initial build
+            this.rebuildVertexOverlay();
+            // keep in sync with basic source-level changes
+            this.source!.on('addfeature', () => this.rebuildVertexOverlay());
+            this.source!.on('removefeature', () => this.rebuildVertexOverlay());
+            this.source!.on('changefeature', () => this.rebuildVertexOverlay());
+        } else {
+            this.destroyVertexLayer();
+        }
     }
+
     disableEditing() {
         if (!this.map) return;
         // if (this.modify) this.map.removeInteraction(this.modify), (this.modify = undefined);
@@ -436,12 +603,14 @@ export class DrawController {
             this.map.removeInteraction(this.snap);
             this.snap = undefined;
         }
+        this.destroyVertexLayer();
     }
 
     clear() {
         const count = this.source?.getFeatures().length ?? 0;
         this.source?.clear(true);
         this.events.emit('draw:cleared', { count });
+        if (this.vertexLayer) this.rebuildVertexOverlay();
     }
 
     exportGeoJSON(map: OlMap, opts?: DrawExportOptions) {

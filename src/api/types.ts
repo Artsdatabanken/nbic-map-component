@@ -299,6 +299,12 @@ export interface AdoptLayerOptions {
     role?: 'overlay' | 'hover' | 'draw'; // default 'overlay'
 }
 
+export interface EnableEditingOptions {
+    showVertices?: boolean;            // default true
+    showVerticesPersistent?: boolean;
+    vertexStyle?: DrawStyleOptions;    // optional custom style for the handles
+}
+
 // ---- layer def ----
 export interface LayerDef {
     id: string;

@@ -441,7 +441,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         // drawing
         startDrawing: (opts) => draw.start(opts),
         stopDrawing: () => draw.stop(),
-        enableDrawEditing: () => draw.enableEditing(),
+        enableDrawEditing: (opts) => draw.enableEditing(opts),
         disableDrawEditing: () => draw.disableEditing(),
         undoLastPoint: () => draw.undoLastPoint(),
         finishCurrent: () => draw.finishCurrent(),

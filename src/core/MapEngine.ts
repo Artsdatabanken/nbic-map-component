@@ -1,5 +1,5 @@
 // src/core/MapEngine.ts
-import type { MapInit, MapCoord, CameraState, LayerDef, HitResult, HoverInfoOptions, DrawImportOptions, DrawExportOptions, DrawOptions, DrawStyleOptions, InsertGeomOptions, UpdateGeoJSONLayerOptions, AdoptLayerOptions } from '../api/types';
+import type { MapInit, MapCoord, CameraState, LayerDef, HitResult, HoverInfoOptions, DrawImportOptions, DrawExportOptions, DrawOptions, DrawStyleOptions, InsertGeomOptions, UpdateGeoJSONLayerOptions, AdoptLayerOptions, EnableEditingOptions } from '../api/types';
 import type { MapEventMap } from '../api/events';
 import type { Emitter } from '../core/state/store';
 import type { Extent } from 'ol/extent';
@@ -52,7 +52,7 @@ export interface MapEngine {
     startDrawing(opts: DrawOptions): void;
 
     stopDrawing(): void;
-    enableDrawEditing(): void;
+    enableDrawEditing(opts?: EnableEditingOptions): void;
     disableDrawEditing(): void;
     undoLastPoint(): void;
     finishCurrent(): void;

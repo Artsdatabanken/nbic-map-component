@@ -10,7 +10,8 @@ import type {
     DrawStyleOptions,
     InsertGeomOptions,
     UpdateGeoJSONLayerOptions,
-    AdoptLayerOptions
+    AdoptLayerOptions,
+    EnableEditingOptions
 } from './types';
 import type { MapEngine } from '../core/MapEngine';
 import { createEmitter } from '../core/state/store';
@@ -130,7 +131,7 @@ export class MapAPI {
     startDrawing(opts: DrawOptions) { this.engine.startDrawing(opts); }
     stopDrawing() { this.engine.stopDrawing(); }
 
-    enableDrawEditing() { this.engine.enableDrawEditing(); }
+    enableDrawEditing(opts?: EnableEditingOptions) { this.engine.enableDrawEditing(opts); }
     disableDrawEditing() { this.engine.disableDrawEditing(); }
 
     setDrawnFeatureStyle(feature: Feature<Geometry>, style: DrawStyleOptions) {
