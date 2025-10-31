@@ -12,7 +12,7 @@ import Point from 'ol/geom/Point';
 import type { MapEventMap } from '../../../api/events';
 import type { Emitter } from '../../state/store';
 
-import { makeDrawStyle } from '../adapters/draw-style';
+import { makeDrawStyle, makeUpdatedDrawStyle } from '../adapters/draw-style';
 import { Feature } from 'ol';
 import { unByKey } from 'ol/Observable';
 import { listen } from 'ol/events';
@@ -638,7 +638,7 @@ export class DrawController {
 
     setFeatureStyle(feature: OlFeature<Geometry>, style: DrawStyleOptions): void {
         feature.set('nbic:style', style);          // keep style in properties for export/restore
-        feature.setStyle(makeDrawStyle(style));     // apply OL Style right away
+        feature.setStyle(makeUpdatedDrawStyle(style));     // apply OL Style right away
     }
 
     clearFeatureStyle(feature: OlFeature<Geometry>): void {

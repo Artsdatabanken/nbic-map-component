@@ -5,3 +5,4 @@ export { createMap } from './factory';
 
 export { MapEvents } from './api/events';
 export type { MapEventName, MapEventPayload } from './api/events';
+export * as geojson from './core/geojson';
