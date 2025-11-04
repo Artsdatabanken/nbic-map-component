@@ -8,7 +8,7 @@ const fallback = new Style({
     stroke: new Stroke({ color: '#666', width: 1 }),
 });
 
-export function toOlStyle(def: StyleDef, label?: number): StyleLike {
+export function toOlStyle(def: StyleDef, label?: string): StyleLike {
     if ('ref' in def) {
         // Not wired yet: style registry
         throw new Error(`Style ref '${def.ref}' cannot be resolved (no StyleRegistry wired).`);

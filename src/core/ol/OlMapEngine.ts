@@ -116,6 +116,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                     },
                     { hitTolerance: 5, layerFilter: isPickableLayer }
                 );
+                console.log('click features', evt.pixel);
                 events.emit('pointer:click', features.length ? { features } : null);
             });
         },

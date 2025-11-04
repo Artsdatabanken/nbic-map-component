@@ -332,6 +332,7 @@ export interface LayerDef {
         style?: StyleDef;       // cluster style (circle + text etc.)
         keepSingleAsCluster?: boolean; // default false
         countField?: string; // <-- default 'count'
+        maxClusterPoints?: number; // optional max points per cluster for example 99 (will show '99+')
     };
 }
 

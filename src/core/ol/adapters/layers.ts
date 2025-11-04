@@ -103,7 +103,7 @@ export function toOlLayer(
 
                     if (def.cluster?.enabled && members) {
                         // // total for the bubble (sum of member counts; each member defaults to 1)
-                        const total = sumCount(members, countField) || members.length;
+                        const total = sumCount(members, countField) || members.length;                                                
                         
                         if (members.length === 1 && !def.cluster.keepSingleAsCluster) {
                             // Render as original feature style
@@ -135,7 +135,7 @@ export function toOlLayer(
                         }
                         if (explicitClusterStyle) {                            
                             if (def.cluster.style) {
-                                return styleFn(def.cluster.style, total) as Style;
+                                return styleFn(def.cluster.style, String(def.cluster.maxClusterPoints ? (total > def.cluster.maxClusterPoints ? def.cluster.maxClusterPoints + '+' : total) : total)) as Style;
                             } else {
                                 return explicitClusterStyle;
                             }
@@ -174,7 +174,7 @@ export function toOlLayer(
                         //     }
                         // }
 
-                        // Default bubble shows `total` (NOT members.length)
+                        // Default bubble shows `total` (NOT members.length)                        
                         return new Style({
                             image: new CircleStyle({
                                 radius: 12,
@@ -182,7 +182,7 @@ export function toOlLayer(
                                 stroke: new Stroke({ color: '#fff', width: 2 }),
                             }),
                             text: new Text({
-                                text: String(total),
+                                text: String(def.cluster.maxClusterPoints ? (total > def.cluster.maxClusterPoints ? def.cluster.maxClusterPoints + '+' : total) : total),
                                 fill: new Fill({ color: '#fff' }),
                             }),
                         });
