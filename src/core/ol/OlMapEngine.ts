@@ -34,7 +34,8 @@ import Cluster from 'ol/source/Cluster';
 import { makeDrawStyle } from './adapters/draw-style';
 
 import { isPickableLayer } from './utils/picking';
-import { toViewCoord } from './utils/coords';
+import { toViewCoord, transformCoordsFrom, transformCoordsArrayFrom } from './utils/coords';
+import { Coordinate } from 'ol/coordinate';
 
 function resolveVectorSource(layer: VectorLayer<VectorSource<OlFeature<Geometry>>>): VectorSource<OlFeature<Geometry>> | null {
     const src = layer.getSource();
@@ -115,9 +116,9 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
                         return undefined;
                     },
                     { hitTolerance: 5, layerFilter: isPickableLayer }
-                );
-                console.log('click features', evt.pixel);
-                events.emit('pointer:click', features.length ? { features } : null);
+                );                
+                const clickCoordinate = evt.coordinate as Coordinate;
+                events.emit('pointer:click', features.length ? { features, clickCoordinate } : { clickCoordinate, features: null });
             });
         },
 
@@ -535,6 +536,15 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             src.clear(true);
             return true;
         },    
+
+        // Transform coordinates        
+        transformCoordsFrom: (coord: [number, number], from: string, to: string) => {
+            return transformCoordsFrom(coord, from, to);
+        },
+
+        transformCoordsArrayFrom: (coords: [number, number][], from: string, to: string) => {
+            return transformCoordsArrayFrom(coords, from, to);
+        },
         
         // Zoom
         zoomToFeature: (layerId, featureId, opts) => zoom.zoomToFeatureById(registry, layerId, featureId, opts),

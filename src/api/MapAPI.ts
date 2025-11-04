@@ -178,6 +178,15 @@ export class MapAPI {
     deactivateGeolocation() { this.engine.deactivateGeolocation(); }
     zoomToGeolocation(maxZoom?: number) { return this.engine.zoomToGeolocation(maxZoom); }
 
+    // Transform coordinates
+    transformCoordsFrom(coord: [number, number], from: string, to: string): [number, number] {
+        return this.engine.transformCoordsFrom(coord, from, to);
+    }
+
+    transformCoordsArrayFrom(coords: [number, number][], from: string, to: string): [number, number][] {
+        return this.engine.transformCoordsArrayFrom(coords, from, to);
+    }
+
     // Zoom
     zoomToFeature(layerId: string, featureId: string, opts?: { maxZoom?: number; padding?: number }): boolean {
         return this.engine.zoomToFeature(layerId, featureId, opts);

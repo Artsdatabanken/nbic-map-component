@@ -28,3 +28,11 @@ export function toDataCoord(
     if (to === viewProj) return coord;
     return transform(coord, viewProj, to) as [number, number];
 }
+
+export function transformCoordsArrayFrom(coords: [number, number][], from: string, to: string): [number, number][] {
+    return coords.map((c) => transform(c, from, to) as [number, number]);
+}
+
+export function transformCoordsFrom(coords: [number, number], from: string, to: string): [number, number] {
+    return transform(coords, from, to) as [number, number];
+}

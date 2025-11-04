@@ -5,6 +5,7 @@ import type BaseLayer from 'ol/layer/Base';
 import type { Extent } from 'ol/extent';
 import type { Geometry } from 'ol/geom';
 import type { Type } from 'ol/geom/Geometry';
+import { Coordinate } from 'ol/coordinate';
 
 export type MapEventMap = {
     ready: void;
@@ -13,7 +14,7 @@ export type MapEventMap = {
     'layer:added': { layerId: string };
     'layer:removed': { layerId: string };
     'pointer:move': { coordinate: MapCoord };
-    'pointer:click': { features: { feature: Feature; layer: BaseLayer }[] } | null;
+    'pointer:click': { features: { feature: Feature; layer: BaseLayer }[], clickCoordinate: Coordinate } | { clickCoordinate: Coordinate, features: null};
     'extent:changed': {
         extent: Extent;
     };

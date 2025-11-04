@@ -47,6 +47,7 @@ export function toFeature<T>(item: T, index: number, opts: BuildOptions<T>): Fea
     if (opts.kind === 'Point') {
         const p = opts.getPoint(item, index);
         if (!p || !validLonLat(p.lon, p.lat)) {
+        // if (!p) {
             if (skipInvalid) return null;
             geometry = { type: 'Point', coordinates: [0, 0] } as Point;
         } else {
