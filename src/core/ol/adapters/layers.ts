@@ -121,6 +121,12 @@ export function toOlLayer(
                                     ? (inner ? explicitLayerStyle(inner, resolution) : undefined)
                                     : explicitLayerStyle;
                             }
+                            const innerHasPerFeature =
+                                !!inner?.get && !!inner.get('nbic:style');
+                            if (innerHasPerFeature) {
+                                return styleFromFeature(inner, resolution);
+                            }
+                            
                             if (inner) {
                                 return styleFromFeature(inner, resolution) as Style;
                             }
@@ -189,6 +195,12 @@ export function toOlLayer(
                     }
 
                     // Non-clustered case: use explicit style if any, else per-feature fallback
+                    const hasPerFeature = typeof feature.get === 'function' && !!feature.get('nbic:style');
+
+                    if (hasPerFeature) {
+                        // honor per-feature styling first (so your GeoJSON 'nbic:style' applies)
+                        return styleFromFeature(feature, resolution);
+                    }
                     if (typeof explicitLayerStyle === 'function') {
                         return explicitLayerStyle(feature, resolution);
                     }

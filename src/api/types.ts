@@ -66,6 +66,17 @@ export interface DrawStyleOptions {
         offsetX?: number;
         offsetY?: number;
     };
+    icon?: {
+        src: string;
+        scale?: number;
+        size?: [number, number];
+        anchor?: [number, number];
+        anchorXUnits?: 'fraction' | 'pixels';
+        anchorYUnits?: 'fraction' | 'pixels';
+        rotation?: number;
+        opacity?: number;
+        color?: string; // optional tint
+    };
     // icon?: {
     //     materialIconName: string; // e.g. 'place', 'star', 'circle'
     //     size?: number;            // in px, default 24
