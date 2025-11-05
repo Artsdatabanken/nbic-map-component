@@ -89,6 +89,7 @@ export interface MapEngine {
     // Transform coordinates
     transformCoordsFrom(coord: [number, number], from: string, to: string): [number, number];
     transformCoordsArrayFrom(coords: [number, number][], from: string, to: string): [number, number][];
+    transformExtentFrom(extent: Extent, from: string, to: string): number[] | null;
 
     // Zoom
     zoomToFeature(layerId: string, featureId: string, opts?: { maxZoom?: number; padding?: number }): boolean;

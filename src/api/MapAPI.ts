@@ -187,6 +187,10 @@ export class MapAPI {
         return this.engine.transformCoordsArrayFrom(coords, from, to);
     }
 
+    transformExtentFrom(extent: Extent, from: string, to: string): number[] | null {                
+        return this.engine.transformExtentFrom(extent, from, to);    
+    }
+
     // Zoom
     zoomToFeature(layerId: string, featureId: string, opts?: { maxZoom?: number; padding?: number }): boolean {
         return this.engine.zoomToFeature(layerId, featureId, opts);

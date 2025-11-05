@@ -216,6 +216,23 @@ export interface SimpleStyleOptions {
         offsetX?: number;
         offsetY?: number;
     };
+
+    icon?: {
+        /** e.g. '/assets/icons/marker.svg' */
+        src: string;
+        /** 1 = 100% */
+        scale?: number;
+        /** 0..1 if using fraction; or pixels if using 'pixels' units */
+        anchor?: [number, number];
+        anchorXUnits?: 'fraction' | 'pixels';
+        anchorYUnits?: 'fraction' | 'pixels';
+        /** [w, h] of the source image (optional, but helps layout) */
+        size?: [number, number];
+        rotation?: number;   // radians
+        opacity?: number;    // 0..1
+        /** Optional tint for SVGs (works for inline-colorable SVGs) */
+        color?: string;
+    };
 }
 
 

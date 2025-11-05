@@ -34,7 +34,7 @@ import Cluster from 'ol/source/Cluster';
 import { makeDrawStyle } from './adapters/draw-style';
 
 import { isPickableLayer } from './utils/picking';
-import { toViewCoord, transformCoordsFrom, transformCoordsArrayFrom } from './utils/coords';
+import { toViewCoord, transformCoordsFrom, transformCoordsArrayFrom, transformExtentFrom } from './utils/coords';
 import { Coordinate } from 'ol/coordinate';
 
 function resolveVectorSource(layer: VectorLayer<VectorSource<OlFeature<Geometry>>>): VectorSource<OlFeature<Geometry>> | null {
@@ -544,6 +544,10 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
 
         transformCoordsArrayFrom: (coords: [number, number][], from: string, to: string) => {
             return transformCoordsArrayFrom(coords, from, to);
+        },
+
+        transformExtentFrom:(extent: Extent, from: string, to: string) => {             
+            return transformExtentFrom(extent, from, to);
         },
         
         // Zoom

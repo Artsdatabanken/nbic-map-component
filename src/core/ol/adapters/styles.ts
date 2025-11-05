@@ -1,6 +1,6 @@
 // src/core/ol/adapters/styles.ts
 import type { StyleDef } from '../../../api/types';
-import { Style, Fill, Stroke, Circle as CircleStyle, Text } from 'ol/style';
+import { Style, Fill, Stroke, Circle as CircleStyle, Text, Icon } from 'ol/style';
 import type { StyleLike } from 'ol/style/Style';
 
 const fallback = new Style({
@@ -50,6 +50,25 @@ export function toOlStyle(def: StyleDef, label?: string): StyleLike {
                 offsetY: opts.text?.offsetY ?? 0,
             })
             : undefined;
+
+        if (opts.icon) {
+            const i = opts.icon;
+            return new Style({
+                image: new Icon({
+                    src: i.src,
+                    scale: i.scale ?? 1,
+                    anchor: i.anchor ?? [0.5, 1],
+                    anchorXUnits: i.anchorXUnits ?? 'fraction',
+                    anchorYUnits: i.anchorYUnits ?? 'fraction',
+                    size: i.size,
+                    rotation: i.rotation ?? 0,
+                    opacity: i.opacity ?? 1,
+                    color: i.color, // works as tint for compatible SVGs
+                }),
+                text,
+            });
+        }
+
         return new Style({ fill, stroke, image, text });
     }
 

@@ -1,6 +1,7 @@
 // src/core/ol/utils/coords.ts
-import { transform } from 'ol/proj';
+import { transform, transformExtent } from 'ol/proj';
 import type OlMap from 'ol/Map';
+import { Extent } from 'ol/extent';
 
 /** 
  * Transforms a coordinate from a given projection into the map's view projection.
@@ -35,4 +36,8 @@ export function transformCoordsArrayFrom(coords: [number, number][], from: strin
 
 export function transformCoordsFrom(coords: [number, number], from: string, to: string): [number, number] {
     return transform(coords, from, to) as [number, number];
+}
+
+export function transformExtentFrom(extent: Extent, from: string, to: string): number[] | null {                
+    return transformExtent(extent, from, to);    
 }
