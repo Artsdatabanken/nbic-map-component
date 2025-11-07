@@ -217,6 +217,15 @@ export interface SimpleStyleOptions {
         fillColor?: string;
         strokeColor?: string;
         strokeWidth?: number;
+        units?: 'px' | 'map';             // NEW: default 'px'
+        radiusProperty?: string;          // NEW: per-feature override (e.g. 'accuracy' in meters)
+        segments?: number;                // NEW: polygon smoothness (default 64)
+        gradient?: {
+            color: string;                  // CSS (e.g. '#ff0000' or 'rgba(...)')
+            outerScale?: number;            // default 1.4
+            // array of [stop, alpha] (0..1)
+            stops?: Array<[number, number]>;// default [[0,0],[0.6,0.2],[1,0.8]]
+        };
     };
     text?: {
         label?: string;         // used for “Text” draw; default empty (you can set later)
@@ -244,6 +253,16 @@ export interface SimpleStyleOptions {
         /** Optional tint for SVGs (works for inline-colorable SVGs) */
         color?: string;
     };
+
+    // gradient?: {
+    //     color: string;             // CSS color or rgba()
+    //     radius: number;            // radius in map units (if units==='map') or pixels (if units==='px')
+    //     units?: 'map' | 'px';      // default 'map'
+    //     outerScale?: number;       // gradient outer radius multiplier; default 1.4
+    //     stops?: [number, number][];// [offset(0..1), alpha]; default [[0,0],[0.6,0.2],[1,0.8]]
+    //     strokeColor?: string;      // optional outline stroke
+    //     strokeWidth?: number;      // outline width (px)
+    // };
 }
 
 
