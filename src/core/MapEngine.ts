@@ -96,6 +96,9 @@ export interface MapEngine {
     zoomToLayer(layerId: string, opts?: { maxZoom?: number; padding?: number }): boolean;
     zoomToExtent(extent: Extent, opts?: { maxZoom?: number; padding?: number }): boolean;
     fitGeometry(geom: Geometry, opts?: { maxZoom?: number; padding?: number }): boolean;
+
+    // Utils
+    getTargetElement(): HTMLElement | null;
 }
 
 export type MapEngineFactory = (events: Emitter<MapEventMap>) => MapEngine;

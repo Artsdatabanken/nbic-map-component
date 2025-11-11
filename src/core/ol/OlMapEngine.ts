@@ -555,5 +555,10 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         zoomToLayer: (layerId, opts) => zoom.zoomToLayerById(registry, layerId, opts),
         zoomToExtent: (extent, opts) => zoom.zoomToExtent(extent, opts),
         fitGeometry: (geom, opts) => zoom.fitGeometry(geom, opts),
+
+        // Utils
+        getTargetElement:() => {
+            return map?.getTargetElement() ?? null;
+        }
     };
 }

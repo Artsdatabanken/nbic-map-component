@@ -204,4 +204,8 @@ export class MapAPI {
     fitGeometry(geom: Geometry, opts?: { maxZoom?: number; padding?: number }): boolean {
         return this.engine.fitGeometry(geom, opts);
     }
+
+    getTargetElement(): HTMLElement | null {
+        return this.engine.getTargetElement();
+    }
 }
