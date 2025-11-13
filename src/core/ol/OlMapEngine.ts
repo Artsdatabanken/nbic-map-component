@@ -36,6 +36,7 @@ import { makeDrawStyle } from './adapters/draw-style';
 import { isPickableLayer } from './utils/picking';
 import { toViewCoord, transformCoordsFrom, transformCoordsArrayFrom, transformExtentFrom } from './utils/coords';
 import { Coordinate } from 'ol/coordinate';
+import { getCenter } from 'ol/extent';
 
 function resolveVectorSource(layer: VectorLayer<VectorSource<OlFeature<Geometry>>>): VectorSource<OlFeature<Geometry>> | null {
     const src = layer.getSource();
@@ -559,6 +560,10 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         // Utils
         getTargetElement:() => {
             return map?.getTargetElement() ?? null;
+        },
+
+        getCenterFromExtent: (extent: Extent): MapCoord => {
+            return getCenter(extent) as MapCoord;
         }
     };
 }

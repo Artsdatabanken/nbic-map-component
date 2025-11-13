@@ -99,6 +99,7 @@ export interface MapEngine {
 
     // Utils
     getTargetElement(): HTMLElement | null;
+    getCenterFromExtent(extent: Extent): MapCoord;
 }
 
 export type MapEngineFactory = (events: Emitter<MapEventMap>) => MapEngine;

@@ -205,7 +205,12 @@ export class MapAPI {
         return this.engine.fitGeometry(geom, opts);
     }
 
+    // Utils
     getTargetElement(): HTMLElement | null {
         return this.engine.getTargetElement();
+    }
+
+    getCenterFromExtent(extent: Extent): MapCoord {
+        return this.engine.getCenterFromExtent(extent);
     }
 }
