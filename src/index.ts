@@ -5,4 +5,5 @@ export { createMap } from './factory';
 
 export { MapEvents } from './api/events';
 export type { MapEventName, MapEventPayload } from './api/events';
-export * as geojson from './core/geojson';
+export * as nbicMapGeojson from './core/geojson';
+export * as nbicMapUtils from './core/ol/utils';

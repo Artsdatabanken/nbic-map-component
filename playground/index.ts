@@ -1,5 +1,6 @@
 import 'ol/ol.css';
 import { createMap } from '../src';
+import { areaFromLonLatRing } from '../src/core/ol/utils/area';
 
 
 // const map = createMap('map', {
@@ -266,12 +267,26 @@ map.on('draw:vertex', (event) => {
 //         {mode: 'replace', keepStyles: false} )
 // }
 
+const nbicMapArea = areaFromLonLatRing([
+    [10.0, 59.0],
+    [11.0, 59.0],
+    [11.0, 60.0],
+    [10.0, 60.0],
+]);
+
 declare global {
     interface Window {
         nbicMap: ReturnType<typeof createMap>;
     }
 }
+
+declare global {
+    interface Window {
+        nbicMapArea: ReturnType<typeof areaFromLonLatRing>;
+    }
+}
 window.nbicMap = map;
+window.nbicMapArea = nbicMapArea;
 // (window as any).updateGeojson = updateGeojson;
 
 // import { createMap } from '../src';

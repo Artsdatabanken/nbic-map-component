@@ -37,6 +37,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@turf/area": "^7.2.0",
     "@turf/buffer": "^7.2.0",
     "@turf/kinks": "^7.2.0",
     "ol": "^10.6.1",
