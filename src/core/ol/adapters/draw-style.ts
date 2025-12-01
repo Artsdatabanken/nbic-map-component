@@ -66,11 +66,11 @@ export function makeDrawStyle(opts: DrawStyleOptions | undefined): Style {
         stroke,
     });
     const s = new Style();
-    if (!opts?.text) {
+    // if (!opts?.text) {
         s.setImage(image);
         s.setFill(fill);
         s.setStroke(stroke);
-    }
+    // }
     
 
     // Text label (optional)

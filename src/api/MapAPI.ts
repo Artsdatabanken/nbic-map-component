@@ -183,7 +183,7 @@ export class MapAPI {
         return this.engine.transformCoordsFrom(coord, from, to);
     }
 
-    transformCoordsArrayFrom(coords: [number, number][], from: string, to: string): [number, number][] {
+    transformCoordsArrayFrom(coords: number[][], from: string, to: string): number[][] {
         return this.engine.transformCoordsArrayFrom(coords, from, to);
     }
 

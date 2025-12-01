@@ -1,7 +1,7 @@
 // src/core/ol/utils/coords.ts
 import { transform, transformExtent } from 'ol/proj';
 import type OlMap from 'ol/Map';
-import { Extent } from 'ol/extent';
+import { Extent, getCenter } from 'ol/extent';
 
 /** 
  * Transforms a coordinate from a given projection into the map's view projection.
@@ -30,8 +30,8 @@ export function toDataCoord(
     return transform(coord, viewProj, to) as [number, number];
 }
 
-export function transformCoordsArrayFrom(coords: [number, number][], from: string, to: string): [number, number][] {
-    return coords.map((c) => transform(c, from, to) as [number, number]);
+export function transformCoordsArrayFrom(coords: number[][], from: string, to: string): number[][] {
+    return coords.map((c) => transform(c, from, to));
 }
 
 export function transformCoordsFrom(coords: [number, number], from: string, to: string): [number, number] {
@@ -40,4 +40,8 @@ export function transformCoordsFrom(coords: [number, number], from: string, to: 
 
 export function transformExtentFrom(extent: Extent, from: string, to: string): number[] | null {                
     return transformExtent(extent, from, to);    
+}
+
+export function getCenterFromExtent(extent: number[]): number[] {    
+    return getCenter(extent);            
 }

@@ -543,7 +543,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             return transformCoordsFrom(coord, from, to);
         },
 
-        transformCoordsArrayFrom: (coords: [number, number][], from: string, to: string) => {
+        transformCoordsArrayFrom: (coords: number[][], from: string, to: string) => {
             return transformCoordsArrayFrom(coords, from, to);
         },
 
