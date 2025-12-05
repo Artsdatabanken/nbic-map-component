@@ -2,6 +2,7 @@
 import { transform, transformExtent } from 'ol/proj';
 import type OlMap from 'ol/Map';
 import { Extent, getCenter } from 'ol/extent';
+import { MapCoord } from '../../../api/types';
 
 /** 
  * Transforms a coordinate from a given projection into the map's view projection.
@@ -41,7 +42,7 @@ export function transformCoordsFrom(coords: [number, number], from: string, to: 
 export function transformExtentFrom(extent: Extent, from: string, to: string): number[] | null {                
     return transformExtent(extent, from, to);    
 }
-
-export function getCenterFromExtent(extent: number[]): number[] {    
-    return getCenter(extent);            
+    
+export function getCenterFromExtent(extent: number[]): MapCoord {    
+    return getCenter(extent) as MapCoord;            
 }
