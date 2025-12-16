@@ -14,14 +14,16 @@ import { Style, Stroke, Fill, Circle as CircleStyle } from 'ol/style';
 import type { Emitter } from '../../state/store';
 import { MapEventMap, MapEvents } from '../../../api/events';
 import type { MapCoord, HoverInfoOptions, DrawStyleOptions } from '../../../api/types';
+import { getUid } from 'ol/util';
+import type BaseLayer from 'ol/layer/Base';
 
 type ReqHoverOpts = Required<HoverInfoOptions> & { fillColor: string };
 
 const DEFAULTS: ReqHoverOpts = {
     hitTolerance: 5,
-    outlineColor: '#ffcc00',
-    outlineWidth: 3,
-    fillColor: 'rgba(255,204,0,0.15)',
+    outlineColor: 'transparent',
+    outlineWidth: 0,
+    fillColor: 'transparent',
 };
 
 export class HoverInfoController {
@@ -32,7 +34,21 @@ export class HoverInfoController {
     private hoverLayer: VectorLayer | null = null;
     private hoverSource: VectorSource | null = null;
     private pointerMoveKey: EventsKey | null = null;
-    private lastHoverId: unknown = null;
+    // private lastHoverId: unknown = null;
+    private lastHoverKey: string | number | null = null;
+    private viewportLeaveHandler: ((e: Event) => void) | null = null;
+
+    private defaultCursor = '';
+
+    private setCursor(cursor: string | null) {
+        const el = this.map.getTargetElement();
+        if (!el) return;
+
+        // remember original once
+        if (!this.defaultCursor) this.defaultCursor = el.style.cursor || '';
+
+        el.style.cursor = cursor ?? this.defaultCursor;
+    }
 
     constructor(map: OlMap, events: Emitter<MapEventMap>) {
         this.map = map;
@@ -43,11 +59,39 @@ export class HoverInfoController {
         if (options) this.opts = { ...this.opts, ...options };
         this.ensureLayer();
         this.bindPointerMove();
+        this.bindViewportLeave();
     }
 
     deactivate() {
         this.unbindPointerMove();
+        this.unbindViewportLeave();
         this.destroyLayer();
+    }
+
+    private bindViewportLeave() {
+        console.log('HoverInfoController.bindViewportLeave');
+        if (this.viewportLeaveHandler) return;
+
+        const vp = this.map.getViewport();
+        this.viewportLeaveHandler = () => {
+            if (this.lastHoverKey != null) this.clearHover();
+        };
+
+        // pointerleave is nicest (doesn’t bubble)
+        vp.addEventListener('pointerleave', this.viewportLeaveHandler);
+        // optional extra safety (some browsers / devices)
+        vp.addEventListener('mouseleave', this.viewportLeaveHandler);
+    }
+
+    private unbindViewportLeave() {
+        console.log('HoverInfoController.unbindViewportLeave');
+        if (!this.viewportLeaveHandler) return;
+
+        const vp = this.map.getViewport();
+        vp.removeEventListener('pointerleave', this.viewportLeaveHandler);
+        vp.removeEventListener('mouseleave', this.viewportLeaveHandler);
+
+        this.viewportLeaveHandler = null;
     }
 
     setOptions(options: HoverInfoOptions) {
@@ -118,7 +162,7 @@ export class HoverInfoController {
     }
 
     private clearHover() {
-        this.lastHoverId = null;
+        this.lastHoverKey = null;
         this.hoverSource?.clear(true);
         this.events.emit('hover:info', null);
     }
@@ -127,7 +171,112 @@ export class HoverInfoController {
         if (this.hoverLayer) this.map.removeLayer(this.hoverLayer);
         this.hoverLayer = null;
         this.hoverSource = null;
-        this.lastHoverId = null;
+        this.lastHoverKey = null;
+    }
+
+    private bindPointerMove() {
+        if (this.pointerMoveKey) return;
+
+        this.pointerMoveKey = this.map.on('pointermove', (evt) => {
+            const pixel = evt.pixel as Pixel;
+
+            let picked: { feature: FeatureLike; layer: BaseLayer } | null = null;
+
+            this.map.forEachFeatureAtPixel(
+                pixel,
+                (f, l) => {
+                    if (!l) return undefined;
+                    picked = { feature: f as FeatureLike, layer: l as BaseLayer };
+                    return f;
+                },
+                {
+                    hitTolerance: this.opts.hitTolerance,
+                    layerFilter: (l) => (l as BaseLayer).get('nbic:role') !== 'hover',
+                }
+            );
+
+            // ✅ clear immediately when nothing is hovered
+            if (!picked) {
+                if ((this.hoverSource?.getFeatures().length ?? 0) > 0) this.clearHover();
+                this.setCursor('default');
+                return;
+            }
+
+            const { feature: top, layer } = picked;
+            const topF = top as Feature<Geometry>;
+
+            const id = topF.getId?.();
+            const key: string | number =
+                typeof id === 'string' || typeof id === 'number' ? id : getUid(topF);
+
+            if (key === this.lastHoverKey) return;
+
+            // ----- layer config -----
+            const keepSingleAsCluster = !!(layer as BaseLayer).get('nbic:keepSingleAsCluster');
+            const hoverBehavior = (layer as BaseLayer).get('nbic:hoverClusterBehavior') as
+                | 'bubble'
+                | 'unwrapSingle'
+                | undefined;
+
+            const baseHover = (layer as BaseLayer).get('nbic:hoverStyle') as DrawStyleOptions | undefined;
+            const clusterHover = (layer as BaseLayer).get('nbic:hoverClusterStyle') as DrawStyleOptions | undefined;
+            const singleClusterHover = (layer as BaseLayer).get('nbic:hoverSingleClusterStyle') as DrawStyleOptions | undefined;
+            const cursor = (layer as BaseLayer).get('nbic:hoverCursor') as string | undefined;
+            this.setCursor(cursor ?? null);
+
+            // ----- resolve cluster members -----
+            const members = topF.get('features') as Feature<Geometry>[] | undefined;
+
+            // ----- resolve geometry + WHICH feature should provide hover style -----
+            let geom: Geometry | null = null;
+            let hoverStyleToApply: DrawStyleOptions | undefined = baseHover;
+
+            // Per-feature hover style candidates
+            const topHover = topF.get('nbic:hoverStyle') as DrawStyleOptions | undefined;
+
+            const isCluster = !!members?.length;
+
+            if (isCluster) {
+                if (members.length >= 2) {
+                    // Hovering a bubble cluster
+                    geom = topF.getGeometry()?.clone() ?? null;
+                    hoverStyleToApply = clusterHover ?? baseHover;
+                } else {
+                    // Single-member cluster
+                    const preferBubble = keepSingleAsCluster || hoverBehavior === 'bubble';
+                    const inner = members[0];
+                    const innerHover = inner?.get('nbic:hoverStyle') as DrawStyleOptions | undefined;
+
+                    if (preferBubble) {
+                        // show bubble hover
+                        geom = topF.getGeometry()?.clone() ?? null;
+                        hoverStyleToApply = singleClusterHover ?? clusterHover ?? baseHover;
+                    } else {
+                        // unwrap: highlight the inner feature geometry + prefer per-feature hover style
+                        geom = inner?.getGeometry()?.clone() ?? null;
+                        hoverStyleToApply = innerHover ?? baseHover;
+                    }
+                }
+            } else {
+                // Non-clustered feature: highlight itself + prefer per-feature hover style
+                geom = topF.getGeometry()?.clone() ?? null;
+                hoverStyleToApply = topHover ?? baseHover;
+            }
+
+            this.clearHover();
+            if (!geom || !this.hoverSource) return;
+
+            const hf = new Feature<Geometry>({ geometry: geom });
+            if (hoverStyleToApply) hf.set('nbic:hoverStyle', hoverStyleToApply);
+
+            this.hoverSource.addFeature(hf);
+            this.lastHoverKey = key;
+
+            this.events.emit(MapEvents.HoverInfo, {
+                coordinate: evt.coordinate as MapCoord,
+                items: [{ feature: topF, layer }],
+            });
+        });
     }
 
     // private bindPointerMove() {
@@ -136,122 +285,134 @@ export class HoverInfoController {
     //     this.pointerMoveKey = this.map.on('pointermove', (evt) => {
     //         const pixel = evt.pixel as Pixel;
 
-    //         // Single canvas hit-test (avoid double readbacks)
-    //         let top: FeatureLike | undefined;
+
+    //         let picked: { feature: FeatureLike; layer: BaseLayer } | null = null;
+
     //         this.map.forEachFeatureAtPixel(
     //             pixel,
-    //             (f) => {
-    //                 top = f;
+    //             (f, l) => {
+    //                 if (!l) return undefined;
+    //                 picked = { feature: f as FeatureLike, layer: l as BaseLayer };
     //                 return f;
     //             },
     //             {
     //                 hitTolerance: this.opts.hitTolerance,
-    //                 layerFilter: (layer) => layer.get('nbic:role') !== 'hover',  // 👈 skip overlay
+    //                 layerFilter: (l) => (l as BaseLayer).get('nbic:role') !== 'hover',
     //             }
     //         );
 
-    //         if (!top) {
-    //             if (this.lastHoverId != null) this.clearHover();
+    //         if (!picked) {
+    //             if ((this.hoverSource?.getFeatures().length ?? 0) > 0) this.clearHover();
     //             return;
     //         }
 
-    //         const feat = top as Feature<Geometry>;
-    //         const id = feat.getId();
+    //         const { feature: top, layer } = picked;
 
-    //         if (id === this.lastHoverId) {
-    //             // same feature as last frame — do nothing
-    //             return;
+    //         const keepSingleAsCluster = !!(layer as BaseLayer).get('nbic:keepSingleAsCluster');
+    //         const layerHover = (layer as BaseLayer).get('nbic:hoverStyle') as DrawStyleOptions | undefined;
+
+
+
+    //         // const keepSingleAsCluster = !!layer['nbic:keepSingleAsCluster'];
+    //         // const layerHover = layer['nbic:hoverStyle'] as DrawStyleOptions | undefined;
+
+    //         console.log('Hover test: ', keepSingleAsCluster, layerHover, layer);
+
+    //         // type LayerWithGet = { get?: (key: string) => unknown };
+    //         // let picked: { feature: FeatureLike; layer: LayerWithGet } | null = null;
+
+    //         // this.map.forEachFeatureAtPixel(
+    //         //     pixel,
+    //         //     (f, l) => {
+    //         //         picked = { feature: f as FeatureLike, layer: l as LayerWithGet };
+    //         //         return f;
+    //         //     },
+    //         //     {
+    //         //         hitTolerance: this.opts.hitTolerance,
+    //         //         layerFilter: (layer) => (layer as LayerWithGet).get?.('nbic:role') !== 'hover',
+    //         //     }
+    //         // );
+
+    //         // // ✅ IMPORTANT: clear based on actual overlay content
+    //         // if (!picked) {
+    //         //     if ((this.hoverSource?.getFeatures().length ?? 0) > 0) this.clearHover();
+    //         //     return;
+    //         // }
+
+    //         // const { feature: top, layer: BaseLayer } = picked;
+    //         const topF = top as Feature<Geometry>;
+
+    //         const id = topF.getId?.();
+    //         const key: string | number = (typeof id === 'string' || typeof id === 'number')
+    //             ? id
+    //             : getUid(topF); // ✅ stable fallback
+
+    //         if (key === this.lastHoverKey) return;
+
+    //         // resolve geometry (cluster unwrap logic stays)
+    //         const members = topF.get?.('features') as Feature<Geometry>[] | undefined;
+    //         const hoverBehavior =
+    //             (layer as BaseLayer).get('nbic:hoverClusterBehavior') as ('bubble' | 'unwrapSingle' | undefined);
+
+    //         const baseHover =
+    //             (layer as BaseLayer).get('nbic:hoverStyle') as DrawStyleOptions | undefined;
+
+    //         const clusterHover =
+    //             (layer as BaseLayer).get('nbic:hoverClusterStyle') as DrawStyleOptions | undefined;
+
+    //         const singleClusterHover =
+    //             (layer as BaseLayer).get('nbic:hoverSingleClusterStyle') as DrawStyleOptions | undefined;
+
+    //         let hoverStyleToApply: DrawStyleOptions | undefined = baseHover;
+
+            
+
+            
+    //         // const keepSingleAsCluster = !!layer.get?.('nbic:keepSingleAsCluster');
+
+    //         let geom: Geometry | null = null;
+    //         // cluster case
+    //         if (members?.length) {
+    //             if (members.length >= 2) {
+    //                 hoverStyleToApply = clusterHover ?? baseHover;
+    //             } else {
+    //                 const preferBubble = keepSingleAsCluster || hoverBehavior === 'bubble';
+    //                 if (preferBubble) {
+    //                     hoverStyleToApply = singleClusterHover ?? clusterHover ?? baseHover;
+    //                 } else {
+    //                     hoverStyleToApply = baseHover; // unwrapped single member
+    //                 }
+    //             }
+    //         }
+    //         if (members && members?.length) {
+    //             if (members.length === 1 && !keepSingleAsCluster) {
+    //                 const first = members[0];
+    //                 geom = first ? first.getGeometry()?.clone() ?? null : null;
+    //             } else {
+    //                 geom = topF.getGeometry()?.clone() ?? null;
+    //             }
+    //         } else {
+    //             geom = topF.getGeometry()?.clone() ?? null;
     //         }
 
-    //         // update highlight overlay
     //         this.clearHover();
-    //         const geom = feat.getGeometry();
     //         if (!geom || !this.hoverSource) return;
 
-    //         const clone = geom.clone();
-    //         const f = new Feature<Geometry>({ geometry: clone });
-    //         if (id !== undefined) f.setId(id);
-    //         this.hoverSource.addFeature(f);
-    //         this.lastHoverId = f.getId() ?? id ?? null;
+    //         const hf = new Feature<Geometry>({ geometry: geom });
 
-    //         // optional info for consumers
+    //         // const layerHover = layer.get?.('nbic:hoverStyle') as DrawStyleOptions | undefined;
+    //         // if (layerHover) hf.set('nbic:hoverStyle', layerHover);
+    //         if (hoverStyleToApply) hf.set('nbic:hoverStyle', hoverStyleToApply);
+
+    //         this.hoverSource.addFeature(hf);
+    //         this.lastHoverKey = key;
+
     //         this.events.emit(MapEvents.HoverInfo, {
     //             coordinate: evt.coordinate as MapCoord,
-    //             items: [{ feature: feat, layer: this.hoverLayer as VectorLayer }], // layer resolution provided
+    //             items: [{ feature: topF, layer }],
     //         });
     //     });
     // }
-
-    private bindPointerMove() {
-        if (this.pointerMoveKey) return;
-
-        this.pointerMoveKey = this.map.on('pointermove', (evt) => {
-            const pixel = evt.pixel as Pixel;
-
-            // pick the top feature + its originating layer
-            type LayerWithGet = { get?: (key: string) => unknown };
-            let picked: { feature: FeatureLike; layer: LayerWithGet } | null = null;
-
-            this.map.forEachFeatureAtPixel(
-                pixel,
-                (f, l) => {
-                    picked = { feature: f as FeatureLike, layer: l as LayerWithGet };
-                    return f;
-                },
-                {
-                    hitTolerance: this.opts.hitTolerance,
-                    layerFilter: (layer) => (layer as LayerWithGet).get?.('nbic:role') !== 'hover', // don’t hit the overlay
-                }
-            );
-
-            if (!picked) {
-                if (this.lastHoverId != null) this.clearHover();
-                return;
-            }
-
-            const { feature: top, layer } = picked;
-            const id = (top as Feature<Geometry>).getId?.();
-
-            // if same as last, do nothing
-            if (id === this.lastHoverId) return;
-
-            // resolve geometry (unwrap clusters if present and you prefer that behavior)
-            const members = (top as Feature<Geometry>).get?.('features') as Feature<Geometry>[] | undefined;
-            const layerObj: LayerWithGet = layer;
-            const keepSingleAsCluster = !!layerObj.get?.('nbic:keepSingleAsCluster');
-            let geom: Geometry | null = null;
-
-            if (members && members.length) {
-                if (members.length === 1 && !keepSingleAsCluster) {
-                    geom =  members[0] ? members[0].getGeometry()?.clone() ?? null : null; // unwrap single
-                } else {
-                    geom = (top as Feature<Geometry>).getGeometry()?.clone() ?? null; // highlight cluster bubble
-                }
-            } else {
-                geom = (top as Feature<Geometry>).getGeometry()?.clone() ?? null;
-            }
-
-            // update overlay
-            this.clearHover();
-            if (!geom || !this.hoverSource) return;
-
-            const hf = new Feature<Geometry>({ geometry: geom });
-            if (id !== undefined) hf.setId(id);
-
-            // choose style: layer hover style if present, else controller defaults
-            const layerHover = (layer as LayerWithGet).get?.('nbic:hoverStyle') as DrawStyleOptions | undefined;
-            if (layerHover) hf.set('nbic:hoverStyle', layerHover);
-
-            this.hoverSource.addFeature(hf);
-            this.lastHoverId = hf.getId() ?? id ?? null;
-
-            // emit with the ORIGINAL layer (not the hover overlay)
-            this.events.emit(MapEvents.HoverInfo, {
-                coordinate: evt.coordinate as MapCoord,
-                items: [{ feature: top as Feature<Geometry>, layer }], // <- original layer
-            });
-        });
-    }
 
 
     private unbindPointerMove() {

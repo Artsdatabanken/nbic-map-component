@@ -207,8 +207,38 @@ export interface WFSDefOptions {
 //     options?: Record<string, unknown>;
 // }
 
+export interface ThumbnailMarkerOptions {
+    /** property name on the feature holding image url */
+    property?: string;                 // default: 'thumbnail'
+    /** used when no thumbnail is present */
+    fallbackMaterialIcon?: string;      // optional if you want a fallback text-icon marker later
+    /** image size (source pixel size) */
+    imageSize?: [number, number];       // default: [100, 100]
+    /** icon scale for the image */
+    imageScale?: number;                // default: 0.26
+    /** square "frame" radius */
+    frameRadius?: number;               // default: 22
+    /** frame border width */
+    frameBorderWidth?: number;          // default: 3
+    /** frame border color */
+    frameBorderColor?: string;          // default: 'rgba(255,255,255,1)'
+    /** frame fill color */
+    frameFillColor?: string;            // default: '#ffffff'
+    /** frame displacement */
+    frameDisplacement?: [number, number]; // default: [-1, 13]
+    /** triangle radius */
+    pinRadius?: number;                 // default: 10
+    /** pin fill color */
+    pinFillColor?: string;              // default: '#ffffff'
+    /** triangle rotation */
+    pinRotation?: number;               // default: Math.PI / 3
+    /** crossOrigin for thumbnails */
+    crossOrigin?: '' | 'anonymous' | 'use-credentials'; // default: 'anonymous'
+}
+
 // --- style option bags ---
 export interface SimpleStyleOptions {
+    thumbnailMarker?: ThumbnailMarkerOptions;
     fillColor?: string;
     strokeColor?: string;
     strokeWidth?: number;
@@ -368,10 +398,27 @@ export interface LayerDef {
     opacity?: number;
     pickable?: boolean;              // default true (respected by isPickableLayer)
     hover?: {
-        style?: DrawStyleOptions;   // style to use while hovering features of this layer
-        hitTolerance?: number;      // optional per-layer hit tolerance
-        clusterBehavior?: 'bubble' | 'unwrapSingle'; // for cluster layers
-    };    
+        cursor?: string;          // CSS cursor when hovering this layer
+        hitTolerance?: number;
+
+        // how hover resolves clustered features
+        clusterBehavior?: 'bubble' | 'unwrapSingle';
+
+        // hover style for normal (non-cluster) features OR for unwrapped members
+        style?: DrawStyleOptions;
+
+        // hover style specifically for the cluster bubble (size >= 2)
+        clusterStyle?: DrawStyleOptions;
+
+        // optional: hover style specifically for the single-member “bubble” case
+        // (when keepSingleAsCluster=true and you hover that bubble)
+        singleClusterStyle?: DrawStyleOptions;
+    };
+    // hover?: {
+    //     style?: DrawStyleOptions;   // style to use while hovering features of this layer
+    //     hitTolerance?: number;      // optional per-layer hit tolerance
+    //     clusterBehavior?: 'bubble' | 'unwrapSingle'; // for cluster layers
+    // };    
     cluster?: {
         enabled: boolean;
         distance?: number;      // px distance between points

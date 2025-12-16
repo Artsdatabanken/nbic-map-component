@@ -568,7 +568,7 @@ export class DrawController {
         this.modify = new Modify({ source: this.source!, style: modifyStyle });
         this.map.addInteraction(this.modify);
         this.modify.on('modifyend', (e) => {
-            this.events.emit('edit:modified', { count: e.features.getLength() });
+            this.events.emit('edit:modified', { count: e.features.getLength(), feature: e.features.item(0) as OlFeature<Geometry> });
             if (persistent) this.rebuildVertexOverlay();
         });
 

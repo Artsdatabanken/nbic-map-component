@@ -6,7 +6,7 @@ import { Polygon } from 'ol/geom';
 import { MapCoord } from '../../../api/types';
 import { getCenter } from 'ol/extent';
 
-function ensureClosedRing(ring: number[][]): number[][] {
+export function ensureClosedRing(ring: number[][]): number[][] {
     const first = ring[0];
     const last = ring[ring.length - 1];
     const isClosed = first![0] === last![0] && first![1] === last![1];

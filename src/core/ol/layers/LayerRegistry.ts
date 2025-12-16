@@ -24,7 +24,15 @@ export class LayerRegistry {
     remove(id: string) { this.index.delete(id); }
     get(id: string) { return this.index.get(id); }
     clear() { this.index.clear(); }    
+    
+    // getVectorSource(id: string) {
+    //     const lyr = this.index.get(id) as unknown;
+    //     const getSource = (lyr as { getSource?: () => unknown })?.getSource;
+    //     if (typeof getSource !== 'function') return null;
 
+    //     const src = getSource.call(lyr) as unknown;
+    //     return (src as { getFeatures?: () => unknown[] })?.getFeatures ? (src as any) : null;
+    // }
     getVectorSource(id: string): VectorSourceType | null {
         const layer = this.index.get(id);
         if (!layer || !hasGetSource(layer)) return null;

@@ -205,6 +205,17 @@ export class MapAPI {
         return this.engine.fitGeometry(geom, opts);
     }
 
+    // Select
+    selectFeature(layerId: string, featureId: string | number, style?: DrawStyleOptions): boolean {
+        return this.engine.selectFeature(layerId, featureId, style);
+    }
+    clearSelection(): void {
+        this.engine.clearSelection();
+    }
+    getSelection(): { layerId: string; featureId: string | number } | null {
+        return this.engine.getSelection();
+    }
+
     // Utils
     getTargetElement(): HTMLElement | null {
         return this.engine.getTargetElement();

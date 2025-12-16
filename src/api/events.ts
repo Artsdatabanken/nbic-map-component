@@ -29,7 +29,7 @@ export type MapEventMap = {
     'draw:cleared': { count: number };
     'draw:vertex': { kind: string; index: number; coordinate: MapCoord };
     'draw:vertexRemoved': { kind: string; index: number; };
-    'edit:modified': { count: number };
+    'edit:modified': { count: number, feature: Feature<Geometry> };
     'geo:position': { coordinate: MapCoord; accuracy?: number } | null;
     'geo:error': { message: string };
     'fullscreen:change': { active: boolean };
@@ -39,6 +39,7 @@ export type MapEventMap = {
     'base:changed': { regional: string | null; super: string | null };
     'buffer:created': { baseFeature: Feature<Geometry>, bufferFeature: Feature<Geometry>, distance: number, units: string };
     'buffer:interactive:start': {mode: Type};
+    'select:changed': { layerId: string; featureId: string | number } | null;    
     error: { scope: string; message: string; detail?: unknown };
 };
 

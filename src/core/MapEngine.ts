@@ -97,6 +97,11 @@ export interface MapEngine {
     zoomToExtent(extent: Extent, opts?: { maxZoom?: number; padding?: number }): boolean;
     fitGeometry(geom: Geometry, opts?: { maxZoom?: number; padding?: number }): boolean;
 
+    // Select
+    selectFeature(layerId: string, featureId: string | number, style?: DrawStyleOptions): boolean;
+    clearSelection(): void;
+    getSelection(): { layerId: string; featureId: string | number } | null;
+
     // Utils
     getTargetElement(): HTMLElement | null;
     getCenterFromExtent(extent: Extent): MapCoord;

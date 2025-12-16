@@ -37,6 +37,7 @@ import { isPickableLayer } from './utils/picking';
 import { toViewCoord, transformCoordsFrom, transformCoordsArrayFrom, transformExtentFrom } from './utils/coords';
 import { Coordinate } from 'ol/coordinate';
 import { getCenter } from 'ol/extent';
+import { SelectController } from './select/SelectController';
 
 function resolveVectorSource(layer: VectorLayer<VectorSource<OlFeature<Geometry>>>): VectorSource<OlFeature<Geometry>> | null {
     const src = layer.getSource();
@@ -58,6 +59,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
     const controls = new ControlsController();
     const geo = new GeoController(events);
     const zoom = new ZoomController();
+    const select = new SelectController(events);
 
     bases.bindFind((id) => registry.get(id) ?? null);
 
@@ -84,6 +86,9 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             if (dl) registry.add('draw-layer', dl);
             geo.attach(map);
             zoom.attach(map);
+            select.attach(map);
+            
+            // Initial layers
             
             map.on('moveend', () => {
                 if (!map) return;
@@ -131,6 +136,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             map = undefined;
             registry.clear();            
             bases.clear(); 
+            select.detach();
         },
 
         getCamera() {
@@ -556,6 +562,11 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         zoomToLayer: (layerId, opts) => zoom.zoomToLayerById(registry, layerId, opts),
         zoomToExtent: (extent, opts) => zoom.zoomToExtent(extent, opts),
         fitGeometry: (geom, opts) => zoom.fitGeometry(geom, opts),
+
+        // Select
+        selectFeature: (layerId, featureId, style) => select.selectById(registry, layerId, featureId, style),
+        clearSelection: () => select.clear(registry),
+        getSelection: () => select.getSelection(),
 
         // Utils
         getTargetElement:() => {

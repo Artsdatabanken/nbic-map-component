@@ -1,6 +1,6 @@
 // src/core/ol/adapters/styles.ts
 import type { StyleDef } from '../../../api/types';
-import { Style, Fill, Stroke, Circle as CircleStyle, Text, Icon } from 'ol/style';
+import { Style, Fill, Stroke, Circle as CircleStyle, Text, Icon, RegularShape } from 'ol/style';
 import type { StyleLike } from 'ol/style/Style';
 import { Circle as CircleGeom } from 'ol/geom';
 import type { FeatureLike } from 'ol/Feature';
@@ -8,12 +8,86 @@ import Point from 'ol/geom/Point';
 import * as olColor from 'ol/color';
 // import type { State as RenderState } from 'ol/render';
 import { makeGradientRenderer } from './gradient';
+// import { Style, Fill, Stroke, Circle as CircleStyle, Text, Icon, RegularShape } from 'ol/style';
 
 /** fallback for unknown / missing style */
 const fallback = new Style({
     fill: new Fill({ color: 'rgba(0,0,0,0.1)' }),
     stroke: new Stroke({ color: '#666', width: 1 }),
 });
+
+// Cache styles per thumbnail URL
+const thumbCache = new Map<string, Style[]>();
+
+function getInnerFeatureFromCluster(feature: FeatureLike): FeatureLike {
+    const members = feature.get?.('features') as FeatureLike[] | undefined;
+    if (members && members.length === 1) {
+        const m0 = members[0];
+        return m0 ?? feature;
+    }
+    return feature;
+}
+
+function getClusterSize(feature: FeatureLike): number {
+    const members = feature.get?.('features') as FeatureLike[] | undefined;
+    return members?.length ?? 0;
+}
+
+function makeThumbnailMarkerStyle(thumbnail: string, opts: {
+    frameRadius: number;
+    frameBorderWidth: number;
+    frameBorderColor: string;
+    frameFillColor: string;
+    frameDisplacement: [number, number];
+    pinRadius: number;
+    pinFillColor: string;
+    pinRotation: number;
+    imageSize: [number, number];
+    imageScale: number;
+    crossOrigin: '' | 'anonymous' | 'use-credentials';
+}): Style[] {
+    const cached = thumbCache.get(thumbnail);
+    if (cached) return cached;
+
+    const styles: Style[] = [
+        new Style({
+            image: new RegularShape({
+                stroke: new Stroke({ color: opts.frameBorderColor, width: opts.frameBorderWidth }),
+                fill: new Fill({ color: opts.frameFillColor }),
+                points: 4,
+                radius: opts.frameRadius,
+                angle: Math.PI / 4,
+                displacement: opts.frameDisplacement,
+            }),
+        }),
+        new Style({
+            image: new RegularShape({
+                fill: new Fill({ color: opts.pinFillColor }),
+                points: 3,
+                radius: opts.pinRadius,
+                rotation: opts.pinRotation,
+                angle: 0,
+            }),
+        }),
+        new Style({
+            image: new Icon({
+                anchor: [0.52, 1],
+                anchorXUnits: 'fraction',
+                anchorYUnits: 'fraction',
+                src: thumbnail,
+                opacity: 1,
+                scale: opts.imageScale,
+                offsetOrigin: 'top-left',
+                offset: [0, 0],
+                size: opts.imageSize,
+                crossOrigin: opts.crossOrigin,
+            }),
+        }),
+    ];
+
+    thumbCache.set(thumbnail, styles);
+    return styles;
+}
 // type CircleRenderCoords = [[number, number], [number, number]];
 
 /** Build a canvas renderer that draws a radial gradient bubble */
@@ -86,7 +160,70 @@ export function toOlStyle(def: StyleDef, label?: string): StyleLike {
 
     if (def.type !== 'simple') return fallback;
 
-    const opts = def.options ?? {};
+    
+
+    const opts = def.options ?? {};    
+
+    if (opts.thumbnailMarker) {
+        const t = opts.thumbnailMarker;
+
+        const property = t.property ?? 'thumbnail';
+        const imageSize: [number, number] = t.imageSize ?? [100, 100];
+        const imageScale = t.imageScale ?? 0.26;
+
+        const frameRadius = t.frameRadius ?? 22;
+        const frameBorderWidth = t.frameBorderWidth ?? 3;
+        const frameBorderColor = t.frameBorderColor ?? 'rgba(255,255,255,1)';
+        const frameFillColor = t.frameFillColor ?? '#ffffff';
+        const frameDisplacement: [number, number] = t.frameDisplacement ?? [-1, 13];
+
+        const pinRadius = t.pinRadius ?? 10;
+        const pinFillColor = t.pinFillColor ?? '#ffffff';
+        const pinRotation = t.pinRotation ?? Math.PI / 3;
+
+        const crossOrigin = t.crossOrigin ?? 'anonymous';
+        const fill = new Fill({ color: opts.fillColor ?? 'rgba(0,0,0,0.2)' });
+        const stroke = new Stroke({ color: opts.strokeColor ?? '#333', width: opts.strokeWidth ?? 1 });
+
+        const image = opts.circle
+            ? new CircleStyle({
+                radius: opts.circle.radius ?? 4,
+                fill: new Fill({ color: opts.circle.fillColor ?? '#3388ff' }),
+                stroke: new Stroke({ color: opts.circle.strokeColor ?? '#222', width: opts.circle.strokeWidth ?? 1 }),
+            })
+            : undefined;
+
+        return (feature: FeatureLike) => {
+            // If it’s a cluster with >1, let your cluster style handle it (return undefined here)
+            const size = getClusterSize(feature);
+            if (size > 1) return undefined;
+
+            // If cluster with single: unwrap to inner feature
+            const inner = getInnerFeatureFromCluster(feature);
+
+            const thumb = inner.get?.(property);
+            const url = typeof thumb === 'string' ? thumb : '';
+
+            if (!url) {
+                // fallback to whatever your “simple” would do (circle or icon etc.)
+                return new Style({ fill, stroke, image, text });
+            }
+
+            return makeThumbnailMarkerStyle(url, {
+                frameRadius,
+                frameBorderWidth,
+                frameBorderColor,
+                frameFillColor,
+                frameDisplacement,
+                pinRadius,
+                pinFillColor,
+                pinRotation,
+                imageSize,
+                imageScale,
+                crossOrigin,
+            });
+        };
+    }
 
     // Base polygon/line paint
     const baseFill = new Fill({ color: opts.fillColor ?? 'rgba(0,0,0,0.2)' });
