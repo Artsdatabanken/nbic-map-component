@@ -7,3 +7,4 @@ export { MapEvents } from './api/events';
 export type { MapEventName, MapEventPayload } from './api/events';
 export * as nbicMapGeojson from './core/geojson';
 export * as nbicMapUtils from './core/ol/utils';
+export * as nbicMapPresets from './presets';
