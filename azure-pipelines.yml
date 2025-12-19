@@ -1,0 +1,26 @@
+trigger: none
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '20.x'   # choose your Node.js version
+  displayName: 'Install Node.js'
+
+- checkout: self
+
+- script: |
+    npm install
+    npm run build
+    npm pack
+  displayName: 'Build and package npm module'
+
+# Publish to Azure Artifacts feed
+- task: Npm@1
+  inputs:
+    command: 'publish'
+    publishRegistry: 'useFeed'
+    publishFeed: 'NPM/npm_test'
+  displayName: 'Publish package to Azure Artifacts'
