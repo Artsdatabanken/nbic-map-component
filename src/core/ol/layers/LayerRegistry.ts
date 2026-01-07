@@ -49,16 +49,42 @@ export class LayerRegistry {
     listIds(): string[] { return Array.from(this.index.keys()); }
     
     /** Reorder overlays and bases. You’ll usually call this from BaseLayersController. */
-    reorder(order: string[], bases: { isBase: (l: BaseLayer) => boolean; baseBand: number }): void {
+    reorder(
+        order: string[],
+        bases: { isBase: (l: BaseLayer) => boolean; baseBand: number }
+    ): void {
         let overlayZ = 0;
         let baseZ = bases.baseBand;
+
         for (const id of order) {
             const l = this.index.get(id);
             if (!l) continue;
-            if (bases.isBase(l)) l.setZIndex(baseZ++);
-            else l.setZIndex(overlayZ++);
+
+            // Never reorder system layers
+            const role = l.get?.('nbic:role');
+            if (role === 'hover' || role === 'draw' || role === 'draw-vertices') continue;
+
+            // Respect pinned zIndex layers (keep whatever zIndex they already have)
+            const pinned = !!l.get?.('nbic:zIndexPinned');
+            if (pinned) continue;
+
+            if (bases.isBase(l)) {
+                l.setZIndex(baseZ++);
+            } else {
+                l.setZIndex(overlayZ++);
+            }
         }
     }
+    // reorder(order: string[], bases: { isBase: (l: BaseLayer) => boolean; baseBand: number }): void {
+    //     let overlayZ = 0;
+    //     let baseZ = bases.baseBand;
+    //     for (const id of order) {
+    //         const l = this.index.get(id);
+    //         if (!l) continue;
+    //         if (bases.isBase(l)) l.setZIndex(baseZ++);
+    //         else l.setZIndex(overlayZ++);
+    //     }
+    // }
     // reorder(order: string[]) {
     //     // order = bottom -> top (decide and document it!)
     //     const base = 100;          // start for normal overlays
