@@ -358,7 +358,7 @@ export type SourceDef =
     | { type: 'wmts'; options: WMTSDefOptions }
     | { type: 'wfs'; options: WFSDefOptions }
     | { type: 'geojson'; options: GeoJSONDefOptions }
-    | { type: 'memory' };
+    | { type: 'memory' };    
     // add more later:
     // | { type: 'wfs'; options: WFSDefOptions }
     // | { type: 'ref'; id: string }

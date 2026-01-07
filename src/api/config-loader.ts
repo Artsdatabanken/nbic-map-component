@@ -20,9 +20,7 @@ export function initMapFromConfig(map: MapAPI, rawJson: unknown) {
     );
     cfg.wfs?.forEach(w =>
         SourceRegistry.register(w.id, () => ({ type: 'wfs', options: w as WFSDefOptions }))
-    );
-
-    console.log('Config loaded, applying to map:', cfg);
+    );    
     // cfg.controls?.zoom && map.addControl('zoom');
 
     // Add layers if provided

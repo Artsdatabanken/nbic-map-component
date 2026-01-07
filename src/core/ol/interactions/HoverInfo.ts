@@ -68,8 +68,7 @@ export class HoverInfoController {
         this.destroyLayer();
     }
 
-    private bindViewportLeave() {
-        console.log('HoverInfoController.bindViewportLeave');
+    private bindViewportLeave() {        
         if (this.viewportLeaveHandler) return;
 
         const vp = this.map.getViewport();
@@ -83,8 +82,7 @@ export class HoverInfoController {
         vp.addEventListener('mouseleave', this.viewportLeaveHandler);
     }
 
-    private unbindViewportLeave() {
-        console.log('HoverInfoController.unbindViewportLeave');
+    private unbindViewportLeave() {        
         if (!this.viewportLeaveHandler) return;
 
         const vp = this.map.getViewport();
@@ -121,8 +119,7 @@ export class HoverInfoController {
     //     this.map.addLayer(this.hoverLayer);
     // }
 
-    private ensureLayer() {
-        console.log('HoverInfoController.ensureLayer: ', this.hoverLayer);
+    private ensureLayer() {        
         if (this.hoverLayer) return;
         this.hoverSource = new VectorSource();
         this.hoverLayer = new VectorLayer({
