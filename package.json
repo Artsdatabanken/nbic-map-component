@@ -1,6 +1,6 @@
 {
   "name": "nbic-map-component",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared map component built on OpenLayers",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -15,8 +15,7 @@
   },
   "files": [
     "dist"
-  ],
-  "sideEffects": false,
+  ],  
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
     "clean": "rimraf dist || rm -rf dist",

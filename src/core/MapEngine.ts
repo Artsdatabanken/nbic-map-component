@@ -55,6 +55,7 @@ export interface MapEngine {
     enableDrawEditing(opts?: EnableEditingOptions): void;
     disableDrawEditing(): void;
     undoLastPoint(): void;
+    undoEdit(): void;
     finishCurrent(): void;
     abortCurrent(): void;
     clearDrawn(): void;
@@ -98,7 +99,7 @@ export interface MapEngine {
     fitGeometry(geom: Geometry, opts?: { maxZoom?: number; padding?: number }): boolean;
 
     // Select
-    selectFeature(layerId: string, featureId: string | number, style?: DrawStyleOptions): boolean;
+    selectFeature(layerId: string, featureId: string | number, style?: DrawStyleOptions, coordinates?: [number, number]): boolean;
     clearSelection(): void;
     getSelection(): { layerId: string; featureId: string | number } | null;
 

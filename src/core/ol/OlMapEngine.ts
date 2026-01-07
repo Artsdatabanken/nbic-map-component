@@ -76,8 +76,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             map = new OlMap({
                 target: init.target,
                 view,
-                controls: new Collection<Control>([]),
-                interactions: undefined,
+                controls: new Collection<Control>([])                
             });
 
             controls.attach(map, events, init.controls);
@@ -193,7 +192,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
             if (def.base) {
                 const role = def.base === 'super' ? 'super' : 'regional';
                 bases.registerBase(layer, role, def);
-            } else if (def.zIndex !== undefined) {
+            } else if (def.zIndexPinned && def.zIndex !== undefined) {
                 layer.setZIndex(def.zIndex);
             }            
         },
@@ -453,6 +452,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         enableDrawEditing: (opts) => draw.enableEditing(opts),
         disableDrawEditing: () => draw.disableEditing(),
         undoLastPoint: () => draw.undoLastPoint(),
+        undoEdit: () => draw.undoEdit(),
         finishCurrent: () => draw.finishCurrent(),
         abortCurrent: () => draw.abortCurrent(),
         clearDrawn: () => draw.clear(),
@@ -564,7 +564,7 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
         fitGeometry: (geom, opts) => zoom.fitGeometry(geom, opts),
 
         // Select
-        selectFeature: (layerId, featureId, style) => select.selectById(registry, layerId, featureId, style),
+        selectFeature: (layerId, featureId, style, coordinates) => select.selectById(registry, layerId, featureId, style, coordinates),
         clearSelection: () => select.clear(registry),
         getSelection: () => select.getSelection(),
 

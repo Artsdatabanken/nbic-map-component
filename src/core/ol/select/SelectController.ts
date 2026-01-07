@@ -11,7 +11,7 @@ import type { DrawStyleOptions } from '../../../api/types';
 import { makeDrawStyle } from '../adapters/draw-style';
 import type { LayerRegistry } from '../layers/LayerRegistry';
 
-export type Selection = { layerId: string; featureId: string | number };
+export type Selection = { layerId: string; featureId: string | number; coordinates?: [number, number] };
 
 export class SelectController {
     private map?: OlMap;
@@ -46,7 +46,7 @@ export class SelectController {
         //     }
         // }
         if (registry) {
-            const prev = this.findFeatureById(registry, this.selected.layerId, this.selected.featureId);
+            const prev = this.findFeatureById(registry, this.selected.layerId, this.selected.featureId, this.selected.coordinates);
             if (prev) this.restoreFeature(prev);
         }
 
@@ -61,7 +61,8 @@ export class SelectController {
         registry: LayerRegistry,
         layerId: string,
         featureId: string | number,
-        style?: DrawStyleOptions
+        style?: DrawStyleOptions,
+        coordinates?: [number, number]
     ): boolean {
         if (!this.map) return false;
 
@@ -74,17 +75,17 @@ export class SelectController {
         // }
 
         if (this.selected) {
-            const prev = this.findFeatureById(registry, this.selected.layerId, this.selected.featureId);
+            const prev = this.findFeatureById(registry, this.selected.layerId, this.selected.featureId, this.selected.coordinates);
             if (prev) this.restoreFeature(prev);
             this.selected = null;
             this.selectedPrevStyle = undefined;
             this.selectedPrevNbicStyle = undefined;
         }
 
-        const f = this.findFeatureById(registry, layerId, featureId);
+        const f = this.findFeatureById(registry, layerId, featureId, coordinates);
         if (!f) return false;
 
-        this.selected = { layerId, featureId };
+        this.selected = { layerId, featureId, coordinates };
         this.selectedPrevStyle = f.getStyle();
         this.selectedPrevNbicStyle = f.get('nbic:style');
 
@@ -143,7 +144,8 @@ export class SelectController {
     private findFeatureById(
         registry: LayerRegistry,
         layerId: string,
-        featureId: string | number
+        featureId: string | number,
+        coordinates?: [number, number]
     ): OlFeature<Geometry> | null {
         const src = registry.getVectorSource(layerId);
         if (!src) return null;
@@ -154,8 +156,17 @@ export class SelectController {
             const f = inner?.getFeatureById(featureId);
             return (f as OlFeature<Geometry> | null) ?? null;
         }
-
-        const f = src.getFeatureById(featureId);
+        let f = null;
+        if (coordinates) {
+            const features = src.getFeaturesAtCoordinate(coordinates);
+            f = features ? features[0] : null;            
+        } else {
+            f = src.getFeatureById(featureId);
+            if (!f) {
+                f = src.getFeatureByUid(featureId.toString());
+            }
+        }
+                 
         return (f as OlFeature<Geometry> | null) ?? null;
     }
 }

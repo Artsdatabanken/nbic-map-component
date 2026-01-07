@@ -391,6 +391,7 @@ export interface LayerDef {
     style?: StyleDef;
     visible?: boolean;
     zIndex?: number;
+    zIndexPinned?: boolean;
     base?: boolean | 'super' | 'regional';
     background?: string;
     minZoom?: number;

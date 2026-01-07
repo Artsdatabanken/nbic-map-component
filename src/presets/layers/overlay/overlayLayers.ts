@@ -1,5 +1,7 @@
 import type { LayerDef } from '../../../api/types';
 
+export const norwayCoordinate = [10.4, 63.44];
+
 export const administrativeEnheterKommune: LayerDef = {
     id: 'kommune',
     kind: 'vector',
@@ -19,6 +21,8 @@ export const administrativeEnheterKommune: LayerDef = {
     pickable: false,
     maxZoom: 14,
     minZoom: 7,
+    zIndex: -2,
+    zIndexPinned: true,
     hover: {
         style: { strokeColor: 'transparent', fillColor: 'transparent' },
     },
@@ -44,6 +48,8 @@ export const administrativeEnheterFylke: LayerDef = {
     pickable: false,
     maxZoom: 14,
     minZoom: 1,
+    zIndex: -1,
+    zIndexPinned: true,
     hover: {
         style: { strokeColor: 'transparent', fillColor: 'transparent' },
     },

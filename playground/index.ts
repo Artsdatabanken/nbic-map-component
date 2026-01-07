@@ -108,21 +108,21 @@ map.addLayer({
 
 
 
-map.addLayer({
-    id: "eco",
-    kind: "vector",
-    visible: false,
-    source: { type: "geojson", options: { url: "https://openlayers.org/data/vector/ecoregions.json" } },
-    // you can’t encode a function in JSON; apply style later imperatively
-})
+// map.addLayer({
+//     id: "eco",
+//     kind: "vector",
+//     visible: false,
+//     source: { type: "geojson", options: { url: "https://openlayers.org/data/vector/ecoregions.json" } },
+//     // you can’t encode a function in JSON; apply style later imperatively
+// })
 
-map.addLayer({
-    id: "eiendom",
-    kind: "vector",
-    visible: true,
-    source: { type: "geojson", options: { dataProjection: 'EPSG:25833', featureProjection: 'EPSG:3857', url: 'https://api.kartverket.no/eiendom/v1/geokoding?matrikkelnummer=5006-290%2F15&omrade=true&utkoordsys=25833' } },
-    // you can’t encode a function in JSON; apply style later imperatively
-})
+// map.addLayer({
+//     id: "eiendom",
+//     kind: "vector",
+//     visible: true,
+//     source: { type: "geojson", options: { dataProjection: 'EPSG:25833', featureProjection: 'EPSG:3857', url: 'https://api.kartverket.no/eiendom/v1/geokoding?matrikkelnummer=5006-290%2F15&omrade=true&utkoordsys=25833' } },
+//     // you can’t encode a function in JSON; apply style later imperatively
+// })
 
 // map.addLayer({
 //     id: 'ar50',
@@ -147,32 +147,32 @@ map.addLayer({
 //     style: { type: 'simple', options: { strokeColor: '#9e7795', strokeWidth: 1 } },
 // });
 
-map.addLayer({
-    id: 'fylker',
-    kind: 'vector',
-    visible: true,
-    base: false,
-    source: {
-        type: 'wfs',
-        options: {
-            url: 'https://wfs.geonorge.no/skwms1/wfs.administrative_enheter',
-            outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
-            typeName: 'app:Fylke',
-            srsName: 'EPSG:3857',
-            minZoomToLoad: 1,
-            strategy: 'bbox',            
-        },
-    },
-    maxZoom: 18,
-    minZoom: 1,
-    pickable: false,
-    hover: {
-        style: { strokeColor: '#ff5a00', strokeWidth: 3, fillColor: 'rgba(255,90,0,0.12)' },
-        hitTolerance: 8,
-        clusterBehavior: 'unwrapSingle', // or 'bubble'
-    },
-    style: { type: 'simple', options: { strokeColor: '#9e7795', strokeWidth: 1.5, fillColor: 'rgba(46, 46, 46, 0.1)' } },
-})
+// map.addLayer({
+//     id: 'fylker',
+//     kind: 'vector',
+//     visible: true,
+//     base: false,
+//     source: {
+//         type: 'wfs',
+//         options: {
+//             url: 'https://wfs.geonorge.no/skwms1/wfs.administrative_enheter',
+//             outputFormat: 'application/gml+xml; version=3.2', // or 'text/xml; subtype=gml/3.1.1'
+//             typeName: 'app:Fylke',
+//             srsName: 'EPSG:3857',
+//             minZoomToLoad: 1,
+//             strategy: 'bbox',            
+//         },
+//     },
+//     maxZoom: 18,
+//     minZoom: 1,
+//     pickable: false,
+//     hover: {
+//         style: { strokeColor: '#ff5a00', strokeWidth: 3, fillColor: 'rgba(255,90,0,0.12)' },
+//         hitTolerance: 8,
+//         clusterBehavior: 'unwrapSingle', // or 'bubble'
+//     },
+//     style: { type: 'simple', options: { strokeColor: '#9e7795', strokeWidth: 1.5, fillColor: 'rgba(46, 46, 46, 0.1)' } },
+// })
 
 map.addLayer({
     id: 'markers',
@@ -218,16 +218,18 @@ map.addLayer({
     id: 'geojsonLayer',
     kind: 'vector',
     visible: true,
-    source: { type: 'geojson', options: { dataProjection: 'EPSG:25833', featureProjection: 'EPSG:3857', text: '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[382213.9958160136,7192693.298516899]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[379010.216936343,7194929.561227733]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385966.8490689363,7195614.040144959]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[380955.9861982096,7196607.205632699]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385085.8247894216,7197926.356068817]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7149304.194866324]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[404805.37905920955,7149328.949441544]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[409912.57599976804,7151959.794116425]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7153948.212827165]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[403836.96814668947,7156195.21246219]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}}]}' } },
+    source: { type: 'geojson', options: { dataProjection: 'EPSG:25833', featureProjection: 'EPSG:3857', text: '{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[382213.9958160136,7192693.298516899]},"properties":{"nbic:hoverStyle":{"strokeColor":"black","strokeWidth":4,"fillColor":"transparent","pointRadius":18 },"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[379010.216936343,7194929.561227733]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385966.8490689363,7195614.040144959]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[380955.9861982096,7196607.205632699]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[385085.8247894216,7197926.356068817]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7149304.194866324]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[404805.37905920955,7149328.949441544]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[409912.57599976804,7151959.794116425]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[400934.4196401772,7153948.212827165]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}},{"type":"Feature","geometry":{"type":"Point","coordinates":[403836.96814668947,7156195.21246219]},"properties":{"nbic:style":{"strokeColor":"#ff6600","fillColor":"rgba(255,102,0,0.2)","strokeWidth":2}}}]}' } },
     hover: {
-        style: { strokeColor: 'yellow', strokeWidth: 4, fillColor: 'transparent', pointRadius: 14 },
+        cursor: 'pointer',
+        style: { strokeColor: 'blue', strokeWidth: 4, fillColor: 'transparent', pointRadius: 10 },
+        clusterStyle: { strokeColor: 'yellow', strokeWidth: 4, fillColor: 'transparent', pointRadius: 14 },
         hitTolerance: 8,
         clusterBehavior: 'unwrapSingle', // or 'bubble'
     },
     cluster: {
         enabled: true,
         distance: 20,
-        keepSingleAsCluster: true,
+        keepSingleAsCluster: false,
         style: {
             type: 'simple',
             options: {
@@ -259,6 +261,10 @@ map.once('draw:end', (event) => {
 
 map.on('draw:vertex', (event) => {
     console.log('Draw vertex:', event);
+});
+
+map.on('edit:modified', (event) => {
+    console.log('Edit modified:', event);
 });
     
 

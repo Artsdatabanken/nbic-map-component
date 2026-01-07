@@ -27,6 +27,7 @@ import type { StyleLike } from 'ol/style/Style';
 import { Style, Circle as CircleStyle, Fill, Stroke } from 'ol/style';
 import { LineString, Polygon, MultiLineString, MultiPolygon } from 'ol/geom';
 import type { Coordinate } from 'ol/coordinate';
+import { getUid } from 'ol/util';
 
 // let featureCounter = 0;
 // function nextFeatureId(): string {
@@ -143,6 +144,44 @@ export class DrawController {
     detach() { this.stop(); this.map = undefined; }
 
     getLayer() { this.ensureLayer(); return this.layer; }
+
+    // --- Modify undo history ---
+    private editUndoStack = new Map<string, Geometry[]>(); // key -> snapshots
+    private editRedoStack = new Map<string, Geometry[]>(); // optional (keep for future)
+    private lastEditedKey: string | null = null;
+
+    private featureKey(f: OlFeature<Geometry>): string {
+        const id = f.getId();
+        if (typeof id === 'string') return id;
+        if (typeof id === 'number') return String(id);
+        return String(getUid(f));
+    }
+
+    private pushGeometrySnapshot(f: OlFeature<Geometry>) {
+        const g = f.getGeometry();
+        if (!g) return;
+
+        const key = this.featureKey(f);
+        this.lastEditedKey = key;
+
+        const stack = this.editUndoStack.get(key) ?? [];
+        // store clone (so it won't mutate)
+        stack.push(g.clone());
+
+        // optional: cap history to avoid memory growth
+        const MAX = 50;
+        if (stack.length > MAX) stack.splice(0, stack.length - MAX);
+
+        this.editUndoStack.set(key, stack);
+
+        // clear redo on new edits
+        this.editRedoStack.set(key, []);
+    }
+
+    private restoreGeometrySnapshot(f: OlFeature<Geometry>, geom: Geometry) {
+        // Set clone to avoid shared refs
+        f.setGeometry(geom.clone());
+    }
 
     // ————— helpers —————
     private ensureLayer() {
@@ -528,6 +567,56 @@ export class DrawController {
         this.draw?.abortDrawing();
     }
 
+    undoEdit(target?: { feature: OlFeature<Geometry> } | { layerId: string; featureId: string | number }) {
+        if (!this.source) return;
+
+        let f: OlFeature<Geometry> | null = null;
+
+        // Resolve feature from argument
+        if (target && 'feature' in target) {
+            f = target.feature;
+        } else if (target && 'featureId' in target) {
+            // since this is DrawController, we only know about draw source
+            const found = this.source.getFeatureById(target.featureId);
+            f = (found as OlFeature<Geometry> | null) ?? null;
+        } else {
+            // fallback: undo last edited feature
+            if (!this.lastEditedKey) return;
+            // find feature by key
+            const feats = this.source.getFeatures();
+            for (const cand of feats) {
+                const key = this.featureKey(cand as OlFeature<Geometry>);
+                if (key === this.lastEditedKey) {
+                    f = cand as OlFeature<Geometry>;
+                    break;
+                }
+            }
+        }
+
+        if (!f) return;
+
+        const key = this.featureKey(f);
+        const stack = this.editUndoStack.get(key);
+        if (!stack || stack.length === 0) return;
+
+        // save current into redo (optional but nice)
+        const cur = f.getGeometry();
+        if (cur) {
+            const redo = this.editRedoStack.get(key) ?? [];
+            redo.push(cur.clone());
+            this.editRedoStack.set(key, redo);
+        }
+
+        // restore previous snapshot
+        const prev = stack.pop();
+        if (!prev) return;
+
+        this.restoreGeometrySnapshot(f, prev);
+
+        if (this.vertexLayer) this.rebuildVertexOverlay();
+        this.events.emit('edit:undo', { feature: f });
+    }
+
     // enableEditing() {
     //     if (!this.map) return;
     //     this.ensureLayer();
@@ -567,8 +656,20 @@ export class DrawController {
         const modifyStyle: StyleLike | undefined = showHandles ? this.makeVertexStyle(vertexStyleOpts) : () => undefined;
         this.modify = new Modify({ source: this.source!, style: modifyStyle });
         this.map.addInteraction(this.modify);
-        this.modify.on('modifyend', (e) => {
-            this.events.emit('edit:modified', { count: e.features.getLength(), feature: e.features.item(0) as OlFeature<Geometry> });
+        this.modify.on('modifystart', (e) => {
+            const feats = e.features; // Collection<Feature>
+            // Snapshot BEFORE edits
+            for (let i = 0; i < feats.getLength(); i++) {
+                const f = feats.item(i) as OlFeature<Geometry>;
+                this.pushGeometrySnapshot(f);
+            }
+        });
+        this.modify.on('modifyend', (e) => {            
+            this.events.emit('edit:modified', {
+                count: e.features.getLength(),
+                feature: e.features.item(0) as OlFeature<Geometry>,
+            });
+
             if (persistent) this.rebuildVertexOverlay();
         });
 
@@ -637,6 +738,7 @@ export class DrawController {
     }
 
     setFeatureStyle(feature: OlFeature<Geometry>, style: DrawStyleOptions): void {
+        if (!feature) return;
         feature.set('nbic:style', style);          // keep style in properties for export/restore
         feature.setStyle(makeUpdatedDrawStyle(style));     // apply OL Style right away
     }

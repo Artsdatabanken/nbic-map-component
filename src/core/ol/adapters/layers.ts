@@ -213,7 +213,7 @@ export function toOlLayer(
                 layer = new VectorLayer({
                     source: finalSource as VectorSource,
                     visible: def.visible !== false,
-                    zIndex: def.zIndex,
+                    zIndex: def.zIndexPinned ? def.zIndex : undefined,
                     style: style as StyleLike, // styleFn as unknown as StyleLike,
                     properties: { id: def.id },
                 });
@@ -254,6 +254,10 @@ export function toOlLayer(
     // ✨ render gates
     if (def.minZoom !== undefined && 'setMinZoom' in layer) (layer as TileLayer | VectorLayer).setMinZoom(def.minZoom);
     if (def.maxZoom !== undefined && 'setMaxZoom' in layer) (layer as TileLayer | VectorLayer).setMaxZoom(def.maxZoom);
+
+    // zIndex
+    if (def.zIndex !== undefined) layer.set('nbic:declaredZIndex', def.zIndex);
+    if (def.zIndexPinned) layer.set('nbic:zIndexPinned', true);
 
     return layer;
 }

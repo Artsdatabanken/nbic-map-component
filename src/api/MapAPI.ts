@@ -150,6 +150,7 @@ export class MapAPI {
     }
 
     undoLastPoint() { this.engine.undoLastPoint(); }
+    undoEdit() { this.engine.undoEdit(); }
 
     finishCurrent() { this.engine.finishCurrent(); }
     abortCurrent() { this.engine.abortCurrent(); }
@@ -206,8 +207,8 @@ export class MapAPI {
     }
 
     // Select
-    selectFeature(layerId: string, featureId: string | number, style?: DrawStyleOptions): boolean {
-        return this.engine.selectFeature(layerId, featureId, style);
+    selectFeature(layerId: string, featureId: string | number, style?: DrawStyleOptions, coordinates?: [number, number]): boolean {
+        return this.engine.selectFeature(layerId, featureId, style, coordinates);
     }
     clearSelection(): void {
         this.engine.clearSelection();

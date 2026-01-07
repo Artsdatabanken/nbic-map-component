@@ -30,6 +30,7 @@ export type MapEventMap = {
     'draw:vertex': { kind: string; index: number; coordinate: MapCoord };
     'draw:vertexRemoved': { kind: string; index: number; };
     'edit:modified': { count: number, feature: Feature<Geometry> };
+    'edit:undo': {feature: Feature<Geometry>};
     'geo:position': { coordinate: MapCoord; accuracy?: number } | null;
     'geo:error': { message: string };
     'fullscreen:change': { active: boolean };
