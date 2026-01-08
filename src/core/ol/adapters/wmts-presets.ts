@@ -1,3 +1,4 @@
+// src/core/ol/adapters/wmts-presets.ts
 import type { Extent } from 'ol/extent';
 
 export type WMTSPresetKey = 'npolar-svalbard-32633' | 'npolar-janmayen-25833';

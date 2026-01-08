@@ -1,7 +1,6 @@
 // src/core/ol/adapters/wmts-grid.ts
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import { getTopLeft, getWidth, Extent } from 'ol/extent';
-// import type { Extent } from '../../../api/types';
 
 export function makeGridFromExtent(extent: Extent, tileSize = 256, levels = 19): WMTSTileGrid {
     const size = getWidth(extent) / tileSize;

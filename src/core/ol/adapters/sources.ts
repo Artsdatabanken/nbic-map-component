@@ -3,25 +3,17 @@ import type { SourceDef, SourceInput, WMTSDefOptions, XYZDefOptions, WFSDefOptio
 import OSM from 'ol/source/OSM';
 import XYZ from 'ol/source/XYZ';
 import WMTS from 'ol/source/WMTS';
-// import type { Options as WMTSOptions } from 'ol/source/WMTS';
-// import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import VectorSource from 'ol/source/Vector';
 import type { Feature } from 'ol';
 import GeoJSON from 'ol/format/GeoJSON';
-// import { get as getProjection } from 'ol/proj';
 import { makeGridFromExtent } from './wmts-grid';
 import { createWfsVectorSource } from './wfs-loader';
 import {mapBounds } from '../../projections';
 import type { Geometry } from 'ol/geom';
-// import type { Projection } from 'ol/proj';
 import { get as getProj } from 'ol/proj';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import { getTopLeft, getWidth, Extent } from 'ol/extent';
 import { wmtsPreset, WMTSPresetKey } from './wmts-presets';
-
-// import TileLayer from 'ol/layer/Tile';
-// import { getWidth } from 'ol/extent';
-
 
 export type OlTileSource = OSM | XYZ | WMTS;
 export type OlVectorSource = VectorSource<Feature>;
@@ -36,7 +28,7 @@ export function resolveOlSource(
     }
 ): OlSource {
     if ('ref' in input) {
-        return resolveRef(input.ref);
+        return resolveRef(input.ref as unknown as string);
     }
     return toOlSource(input);
 }

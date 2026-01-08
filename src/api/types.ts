@@ -29,29 +29,6 @@ export type InteractiveBuffer =
         join?: 'round' | 'mitre' | 'bevel';
     });
 
-// export interface DrawBufferOptions {
-//     /** Buffer distance (in `units`) */
-//     distance: number;
-//     /** Units for the buffer distance (default 'meters') */
-//     units?: BufferUnits;
-//     /** Vertex density for the buffered ring (default 32) */
-//     steps?: number;
-//     /** Line cap style for line buffers (turf): 'round' | 'flat' | 'square' */
-//     cap?: 'round' | 'flat' | 'square';
-//     /** Line join style for polygons (turf): 'round' | 'mitre' | 'bevel' */
-//     join?: 'round' | 'mitre' | 'bevel';
-//     /** Style for the resulting buffer feature(s) */
-//     style?: DrawStyleOptions;
-//     /** If true, remove the original feature after buffering */
-//     replaceOriginal?: boolean;
-// }
-
-// export interface StartDrawingOptions {
-//     kind: 'Point' | 'LineString' | 'Polygon' | 'Circle' | 'Text';
-//     style?: DrawStyleOptions;
-//     snap?: boolean;
-//     buffer?: InteractiveBuffer;
-// }
 export interface DrawStyleOptions {
     strokeColor?: string;
     strokeWidth?: number;
@@ -76,13 +53,7 @@ export interface DrawStyleOptions {
         rotation?: number;
         opacity?: number;
         color?: string; // optional tint
-    };
-    // icon?: {
-    //     materialIconName: string; // e.g. 'place', 'star', 'circle'
-    //     size?: number;            // in px, default 24
-    //     color?: string;          // CSS color, default black
-    //     rotation?: number;       // degrees clockwise, default 0
-    // }
+    };    
 }
 
 export interface DrawOptions {
@@ -99,7 +70,6 @@ export interface DrawExportOptions {
 export interface DrawImportOptions {
     clearExisting?: boolean;  // default: false
 }
-// export type Extent = [number, number, number, number];
 
 export interface MapInit {
     target: string | HTMLElement;
@@ -119,26 +89,6 @@ export interface XYZDefOptions {
     attributions?: string | string[];
     tileSize?: number;
 }
-
-// export interface WMTSDefOptions {
-//     url: string;
-//     layer: string;
-//     matrixSet: string;              // e.g. "utm33n" or "EPSG:25833"
-//     format?: string;
-//     style?: string;
-//     tileSize?: number;              // default 256    
-//     projection?: string;            // e.g. "EPSG:25833"
-//     extent?: Extent;                // full extent of the matrix set (map units)
-//     origin?: [number, number];      // top-left of extent (map units)
-//     levels?: number;                // how many zoom levels to generate if no resolutions given
-//     resolutions?: number[];         // explicit resolutions (map units / pixel)
-//     matrixIds?: string[];           // optional explicit matrix ids
-//     wrapX?: boolean;
-//     opacity?: number;
-//     customExtent?: Extent;
-//     attribution?: string;
-//     tileGrid?: unknown;
-// }
 
 export interface WMTSDefOptions {
     url: string;
@@ -169,17 +119,6 @@ export interface WMTSDefOptions {
     urlParamOverrides?: Record<string, string>;
 }
 
-// NEW: basic WFS option bag (implement later)
-// export interface WFSDefOptions {
-//     url: string;
-//     typeName: string;
-//     srsName?: string;
-//     outputFormat?: string;  // usually 'application/json'
-//     strategy?: 'all' | 'bbox';
-//     maxFeatures?: number;
-//     styleId?: string;
-// }
-// src/api/types.ts
 export interface WFSDefOptions {
     url: string;                // e.g. https://wfs.nibio.no/cgi-bin/ar50_2
     typeName: string;           // WFS 1.1.0: typeName, WFS 2.0.0: typeNames (we’ll map)
@@ -195,17 +134,6 @@ export interface WFSDefOptions {
     featureType?: string;
     minZoomToLoad?: number;     // optional min zoom to trigger loading
 }
-
-// export interface SourceDef {
-//     type: string;                // e.g., 'osm', 'wmts', 'vector', 'geojson'
-//     id?: string;
-//     options?: Record<string, unknown>;
-// }
-
-// export interface StyleDef {
-//     type: string;                // e.g., 'simple', 'category', 'ol-style'
-//     options?: Record<string, unknown>;
-// }
 
 export interface ThumbnailMarkerOptions {
     /** property name on the feature holding image url */
@@ -283,16 +211,6 @@ export interface SimpleStyleOptions {
         /** Optional tint for SVGs (works for inline-colorable SVGs) */
         color?: string;
     };
-
-    // gradient?: {
-    //     color: string;             // CSS color or rgba()
-    //     radius: number;            // radius in map units (if units==='map') or pixels (if units==='px')
-    //     units?: 'map' | 'px';      // default 'map'
-    //     outerScale?: number;       // gradient outer radius multiplier; default 1.4
-    //     stops?: [number, number][];// [offset(0..1), alpha]; default [[0,0],[0.6,0.2],[1,0.8]]
-    //     strokeColor?: string;      // optional outline stroke
-    //     strokeWidth?: number;      // outline width (px)
-    // };
 }
 
 
@@ -327,19 +245,6 @@ export interface XYZDefOptions {
     attributions?: string | string[];
     tileSize?: number;
 }
-
-// export interface WMTSDefOptions {
-//     url: string;
-//     layer: string;
-//     matrixSet: string;              // e.g. 'EPSG:3857'
-//     format?: string;                // default 'image/png'
-//     style?: string;                 // default 'default'
-//     tileGrid?: unknown;             // use ol/tilegrid/WMTS in OL adapter
-//     matrixIds?: string[];
-//     resolutions?: number[];
-//     origin?: [number, number];
-//     tileSize?: number;              // default 256
-// }
 
 export interface GeoJSONDefOptions {
     url?: string;
@@ -414,12 +319,7 @@ export interface LayerDef {
         // optional: hover style specifically for the single-member “bubble” case
         // (when keepSingleAsCluster=true and you hover that bubble)
         singleClusterStyle?: DrawStyleOptions;
-    };
-    // hover?: {
-    //     style?: DrawStyleOptions;   // style to use while hovering features of this layer
-    //     hitTolerance?: number;      // optional per-layer hit tolerance
-    //     clusterBehavior?: 'bubble' | 'unwrapSingle'; // for cluster layers
-    // };    
+    };    
     cluster?: {
         enabled: boolean;
         distance?: number;      // px distance between points

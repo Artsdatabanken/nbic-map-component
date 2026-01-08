@@ -38,13 +38,7 @@ export class SelectController {
     clear(registry?: LayerRegistry) {
         if (!this.selected) return;
 
-        // If registry not provided, we can’t restore the feature style safely.
-        // if (registry) {
-        //     const prev = this.findFeatureById(registry, this.selected.layerId, this.selected.featureId);
-        //     if (prev) {
-        //         prev.setStyle(this.selectedPrevStyle); // undefined restores layer style
-        //     }
-        // }
+        // If registry not provided, we can’t restore the feature style safely.        
         if (registry) {
             const prev = this.findFeatureById(registry, this.selected.layerId, this.selected.featureId, this.selected.coordinates);
             if (prev) this.restoreFeature(prev);
@@ -66,14 +60,7 @@ export class SelectController {
     ): boolean {
         if (!this.map) return false;
 
-        // restore previous
-        // if (this.selected) {
-        //     const prev = this.findFeatureById(registry, this.selected.layerId, this.selected.featureId);
-        //     if (prev) prev.setStyle(this.selectedPrevStyle);
-        //     this.selected = null;
-        //     this.selectedPrevStyle = undefined;
-        // }
-
+        // restore previous selection
         if (this.selected) {
             const prev = this.findFeatureById(registry, this.selected.layerId, this.selected.featureId, this.selected.coordinates);
             if (prev) this.restoreFeature(prev);

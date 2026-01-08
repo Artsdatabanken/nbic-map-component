@@ -33,8 +33,7 @@ export class HoverInfoController {
 
     private hoverLayer: VectorLayer | null = null;
     private hoverSource: VectorSource | null = null;
-    private pointerMoveKey: EventsKey | null = null;
-    // private lastHoverId: unknown = null;
+    private pointerMoveKey: EventsKey | null = null;    
     private lastHoverKey: string | number | null = null;
     private viewportLeaveHandler: ((e: Event) => void) | null = null;
 
@@ -100,24 +99,7 @@ export class HoverInfoController {
         this.deactivate();
     }
 
-    // ---- internals ----
-
-    // private ensureLayer() {
-    //     if (this.hoverLayer) return;
-    //     this.hoverSource = new VectorSource();
-    //     this.hoverLayer = new VectorLayer({
-    //         source: this.hoverSource,
-    //         style: () =>
-    //             new Style({
-    //                 stroke: new Stroke({ color: this.opts.outlineColor, width: this.opts.outlineWidth }),
-    //                 fill: new Fill({ color: this.opts.fillColor }),
-    //             }),
-    //         properties: { 'nbic:role': 'hover' },
-    //         zIndex: 9_999,
-    //         updateWhileInteracting: true,
-    //     });
-    //     this.map.addLayer(this.hoverLayer);
-    // }
+    // ---- internals ----    
 
     private ensureLayer() {        
         if (this.hoverLayer) return;
@@ -275,142 +257,6 @@ export class HoverInfoController {
             });
         });
     }
-
-    // private bindPointerMove() {
-    //     if (this.pointerMoveKey) return;
-
-    //     this.pointerMoveKey = this.map.on('pointermove', (evt) => {
-    //         const pixel = evt.pixel as Pixel;
-
-
-    //         let picked: { feature: FeatureLike; layer: BaseLayer } | null = null;
-
-    //         this.map.forEachFeatureAtPixel(
-    //             pixel,
-    //             (f, l) => {
-    //                 if (!l) return undefined;
-    //                 picked = { feature: f as FeatureLike, layer: l as BaseLayer };
-    //                 return f;
-    //             },
-    //             {
-    //                 hitTolerance: this.opts.hitTolerance,
-    //                 layerFilter: (l) => (l as BaseLayer).get('nbic:role') !== 'hover',
-    //             }
-    //         );
-
-    //         if (!picked) {
-    //             if ((this.hoverSource?.getFeatures().length ?? 0) > 0) this.clearHover();
-    //             return;
-    //         }
-
-    //         const { feature: top, layer } = picked;
-
-    //         const keepSingleAsCluster = !!(layer as BaseLayer).get('nbic:keepSingleAsCluster');
-    //         const layerHover = (layer as BaseLayer).get('nbic:hoverStyle') as DrawStyleOptions | undefined;
-
-
-
-    //         // const keepSingleAsCluster = !!layer['nbic:keepSingleAsCluster'];
-    //         // const layerHover = layer['nbic:hoverStyle'] as DrawStyleOptions | undefined;
-
-    //         console.log('Hover test: ', keepSingleAsCluster, layerHover, layer);
-
-    //         // type LayerWithGet = { get?: (key: string) => unknown };
-    //         // let picked: { feature: FeatureLike; layer: LayerWithGet } | null = null;
-
-    //         // this.map.forEachFeatureAtPixel(
-    //         //     pixel,
-    //         //     (f, l) => {
-    //         //         picked = { feature: f as FeatureLike, layer: l as LayerWithGet };
-    //         //         return f;
-    //         //     },
-    //         //     {
-    //         //         hitTolerance: this.opts.hitTolerance,
-    //         //         layerFilter: (layer) => (layer as LayerWithGet).get?.('nbic:role') !== 'hover',
-    //         //     }
-    //         // );
-
-    //         // // ✅ IMPORTANT: clear based on actual overlay content
-    //         // if (!picked) {
-    //         //     if ((this.hoverSource?.getFeatures().length ?? 0) > 0) this.clearHover();
-    //         //     return;
-    //         // }
-
-    //         // const { feature: top, layer: BaseLayer } = picked;
-    //         const topF = top as Feature<Geometry>;
-
-    //         const id = topF.getId?.();
-    //         const key: string | number = (typeof id === 'string' || typeof id === 'number')
-    //             ? id
-    //             : getUid(topF); // ✅ stable fallback
-
-    //         if (key === this.lastHoverKey) return;
-
-    //         // resolve geometry (cluster unwrap logic stays)
-    //         const members = topF.get?.('features') as Feature<Geometry>[] | undefined;
-    //         const hoverBehavior =
-    //             (layer as BaseLayer).get('nbic:hoverClusterBehavior') as ('bubble' | 'unwrapSingle' | undefined);
-
-    //         const baseHover =
-    //             (layer as BaseLayer).get('nbic:hoverStyle') as DrawStyleOptions | undefined;
-
-    //         const clusterHover =
-    //             (layer as BaseLayer).get('nbic:hoverClusterStyle') as DrawStyleOptions | undefined;
-
-    //         const singleClusterHover =
-    //             (layer as BaseLayer).get('nbic:hoverSingleClusterStyle') as DrawStyleOptions | undefined;
-
-    //         let hoverStyleToApply: DrawStyleOptions | undefined = baseHover;
-
-            
-
-            
-    //         // const keepSingleAsCluster = !!layer.get?.('nbic:keepSingleAsCluster');
-
-    //         let geom: Geometry | null = null;
-    //         // cluster case
-    //         if (members?.length) {
-    //             if (members.length >= 2) {
-    //                 hoverStyleToApply = clusterHover ?? baseHover;
-    //             } else {
-    //                 const preferBubble = keepSingleAsCluster || hoverBehavior === 'bubble';
-    //                 if (preferBubble) {
-    //                     hoverStyleToApply = singleClusterHover ?? clusterHover ?? baseHover;
-    //                 } else {
-    //                     hoverStyleToApply = baseHover; // unwrapped single member
-    //                 }
-    //             }
-    //         }
-    //         if (members && members?.length) {
-    //             if (members.length === 1 && !keepSingleAsCluster) {
-    //                 const first = members[0];
-    //                 geom = first ? first.getGeometry()?.clone() ?? null : null;
-    //             } else {
-    //                 geom = topF.getGeometry()?.clone() ?? null;
-    //             }
-    //         } else {
-    //             geom = topF.getGeometry()?.clone() ?? null;
-    //         }
-
-    //         this.clearHover();
-    //         if (!geom || !this.hoverSource) return;
-
-    //         const hf = new Feature<Geometry>({ geometry: geom });
-
-    //         // const layerHover = layer.get?.('nbic:hoverStyle') as DrawStyleOptions | undefined;
-    //         // if (layerHover) hf.set('nbic:hoverStyle', layerHover);
-    //         if (hoverStyleToApply) hf.set('nbic:hoverStyle', hoverStyleToApply);
-
-    //         this.hoverSource.addFeature(hf);
-    //         this.lastHoverKey = key;
-
-    //         this.events.emit(MapEvents.HoverInfo, {
-    //             coordinate: evt.coordinate as MapCoord,
-    //             items: [{ feature: topF, layer }],
-    //         });
-    //     });
-    // }
-
 
     private unbindPointerMove() {
         if (this.pointerMoveKey) {

@@ -20,16 +20,16 @@ export function initMapFromConfig(map: MapAPI, rawJson: unknown) {
     );
     cfg.wfs?.forEach(w =>
         SourceRegistry.register(w.id, () => ({ type: 'wfs', options: w as WFSDefOptions }))
-    );    
-    // cfg.controls?.zoom && map.addControl('zoom');
+    );        
 
     // Add layers if provided
     cfg.layers?.forEach(layer => {
         // Build SourceInput (either {ref} or inline def)
         const source: SourceInput =
             'ref' in layer.source
-                ? { ref: layer.source.ref }
-                : (() => {
+                ? { ref: layer.source.ref as unknown as string }
+                : (() => 
+                    {
                     switch (layer.source.type) {
                         case 'osm':
                             return { type: 'osm' } as const;

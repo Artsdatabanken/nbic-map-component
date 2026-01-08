@@ -21,19 +21,11 @@ import type { EventsKey } from 'ol/events';
 import type { DrawOptions, DrawStyleOptions, DrawExportOptions, DrawImportOptions, EnableEditingOptions } from '../../../api/types';
 import type { Feature as GJFeature, Geometry as GJGeometry } from 'geojson';
 import buffer from '@turf/buffer';
-// import LineString from 'ol/geom/LineString';
-// import Polygon from 'ol/geom/Polygon';
 import type { StyleLike } from 'ol/style/Style';
 import { Style, Circle as CircleStyle, Fill, Stroke } from 'ol/style';
 import { LineString, Polygon, MultiLineString, MultiPolygon } from 'ol/geom';
 import type { Coordinate } from 'ol/coordinate';
 import { getUid } from 'ol/util';
-
-// let featureCounter = 0;
-// function nextFeatureId(): string {
-//     featureCounter += 1;
-//     return `draw-${Date.now()}-${featureCounter}`;
-// }
 
 function mapKindToDraw(
     kind: import('../../../api/types').DrawKind
@@ -109,22 +101,6 @@ function flattenTwice<T>(arr: T[][][]): T[] {
     for (const a of arr) for (const b of a) out.push(...b);
     return out;
 }
-
-// function makeVertexStyle(opts?: DrawStyleOptions): StyleLike {
-//     // Defaults for the vertex handles
-//     const strokeColor = opts?.strokeColor ?? '#1976d2';
-//     const strokeWidth = opts?.strokeWidth ?? 2;
-//     const fillColor = opts?.fillColor ?? '#ffffff';
-//     const radius = opts?.pointRadius ?? 5;
-
-//     return new Style({
-//         image: new CircleStyle({
-//             radius,
-//             fill: new Fill({ color: fillColor }),
-//             stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
-//         }),
-//     });
-// }
 
 export class DrawController {
     private map?: OlMap;
@@ -238,8 +214,6 @@ export class DrawController {
         this.vertexSrc = undefined;
     }
 
-
-
     private verticesOfGeometry(g: Geometry): Coordinate[] {
         if (g instanceof LineString) {
             return g.getCoordinates() as Coordinate[];
@@ -344,8 +318,7 @@ export class DrawController {
             this.map.addInteraction(this.snap);
         }
 
-        // Events
-        // this.draw.on('drawstart', () => this.events.emit('draw:start', { kind: opts.kind }));
+        // Events        
         let keyHandler: ((ev: KeyboardEvent) => void) | null = null;
 
         this.draw.on('drawstart', (e) => {
@@ -457,7 +430,6 @@ export class DrawController {
                 // Pause editing while picking
                 this.modify?.setActive(false);
                 this.snap?.setActive?.(false);
-                // this.draw?.setActive(false);
 
                 let moveKey: EventsKey | undefined = this.map.on('pointermove', async (evt) => {
                     const now = performance.now();
@@ -616,20 +588,6 @@ export class DrawController {
         if (this.vertexLayer) this.rebuildVertexOverlay();
         this.events.emit('edit:undo', { feature: f });
     }
-
-    // enableEditing() {
-    //     if (!this.map) return;
-    //     this.ensureLayer();
-    //     if (!this.modify) {
-    //         this.modify = new Modify({ source: this.source! });
-    //         this.map.addInteraction(this.modify);
-    //         this.modify.on('modifyend', (e) => this.events.emit('edit:modified', { count: e.features.getLength() }));
-    //     }
-    //     if (!this.snap) {
-    //         this.snap = new Snap({ source: this.source! });
-    //         this.map.addInteraction(this.snap);
-    //     }
-    // }
 
     enableEditing(options?: boolean | EnableEditingOptions) {
         if (!this.map) return;

@@ -41,8 +41,7 @@ export interface WFSOptions {
     styleId?: string;           // hook into StyleRegistry/style defs
 }
 
-export interface MapConfig {
-    // housekeeping
+export interface MapConfig {    
     version: 1;
     id: string;
 

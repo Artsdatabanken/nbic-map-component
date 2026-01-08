@@ -10,17 +10,10 @@ import { toOlStyle } from './styles';
 import { makeDrawStyle } from './draw-style';
 import { createDefaultStyle } from 'ol/style/Style';
 import type { StyleLike } from 'ol/style/Style';
-// import type Style from 'ol/style/Style';
 import type { FeatureLike } from 'ol/Feature';
 import ClusterSource from 'ol/source/Cluster';
 import { Style, Circle as CircleStyle, Fill, Stroke, Text } from 'ol/style';
 import type { StyleFunction } from 'ol/style/Style';
-// import TileSource from 'ol/source/Tile';
-// import type VectorSource  from 'ol/source/Vector';
-
-// function styleKey(v: unknown) {
-//     try { return JSON.stringify(v); } catch { return String(v); }
-// }
 
 function styleFromFeature(feature: FeatureLike, resolution: number): Style | Style[] | void { 
     const nbic =
@@ -28,20 +21,6 @@ function styleFromFeature(feature: FeatureLike, resolution: number): Style | Sty
 
     return nbic ? makeDrawStyle(nbic) : createDefaultStyle(feature, resolution);
 }
-
-// function defaultClusterStyle(size: number) {
-//     return new Style({
-//         image: new CircleStyle({
-//             radius: 12,
-//             fill: new Fill({ color: '#3399CC' }),
-//             stroke: new Stroke({ color: '#fff', width: 2 }),
-//         }),
-//         text: new Text({
-//             text: size.toString(),
-//             fill: new Fill({ color: '#fff' }),
-//         }),
-//     });
-// }
 
 export function toOlLayer(
     def: LayerDef,
@@ -66,10 +45,7 @@ export function toOlLayer(
             break;
         case 'vector':
             if (src instanceof VectorSource) {
-                
-
-                
-
+                // Handle clustering if requested                
                 const finalSource = def.cluster?.enabled
                     ? new ClusterSource({
                         distance: def.cluster.distance ?? 40,
@@ -144,41 +120,8 @@ export function toOlLayer(
                                 return styleFn(def.cluster.style, String(def.cluster.maxClusterPoints ? (total > def.cluster.maxClusterPoints ? def.cluster.maxClusterPoints + '+' : total) : total)) as Style;
                             } else {
                                 return explicitClusterStyle;
-                            }
-                            
-                        }
-                        // return defaultClusterStyle(size);
-                        // const keepSingle = !!def.cluster.keepSingleAsCluster;
-
-                        // // total for bubble: sum of each member’s `count` (fallback 1)
-                        // const total = sumCount(members, countField) || members.length;
-
-                        // // expose the total so custom style functions can read it
-                        // // feature.set?.('nbic:clusterTotal', total);
-
-                        // if (members.length === 1 && !keepSingle) {
-                        //     // Render single member as original feature
-                        //     const inner = members[0];
-                        //     if (inner && typeof explicitLayerStyle === 'function') return explicitLayerStyle(inner, resolution);
-                        //     if (explicitLayerStyle) return explicitLayerStyle;
-                        //     return styleFromFeature(inner!, resolution) as Style;
-                        // }
-
-                        // // Cluster bubble (or single kept as bubble)
-                        // if (typeof explicitClusterStyle === 'function') {
-                        //     // Your existing cluster style function can read total via:
-                        //     //   feature.get('nbic:clusterTotal')
-                        //     return explicitClusterStyle(feature, resolution);
-                        // }
-                        // if (explicitClusterStyle) {
-                        //     // If cluster style was an object (not function) and your styleFn accepts a param,
-                        //     // pass `total` so text can be data-driven (your styleFn already supported a second arg).
-                        //     if (def.cluster.style) {
-                        //         return styleFn(def.cluster.style, total) as Style;
-                        //     } else {
-                        //         return explicitClusterStyle;
-                        //     }
-                        // }
+                            }                            
+                        }                        
 
                         // Default bubble shows `total` (NOT members.length)                        
                         return new Style({
@@ -234,10 +177,7 @@ export function toOlLayer(
 
     layer.set('id', def.id);
 
-    // expose hover config to the controller    
-    // if (def.hover?.style) layer.set('nbic:hoverStyle', def.hover.style);
-    // if (def.hover?.hitTolerance != null) layer.set('nbic:hoverHitTol', def.hover.hitTolerance);
-    // if (def.hover?.clusterBehavior) layer.set('nbic:hoverClusterBehavior', def.hover.clusterBehavior);
+    // expose hover config to the controller        
 
     if (def.hover?.style) layer.set('nbic:hoverStyle', def.hover.style);
     if (def.hover?.clusterStyle) layer.set('nbic:hoverClusterStyle', def.hover.clusterStyle);

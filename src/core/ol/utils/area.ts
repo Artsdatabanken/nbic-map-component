@@ -21,11 +21,7 @@ export function ensureClosedRing(ring: number[][]): number[][] {
 export function areaFromLonLatRing(ring: number[][]): number {
     if (!ring.length) return 0;
 
-    // ensure ring is closed
-    // const first = ring[0];
-    // const last = ring[ring.length - 1];
-    // const isClosed = first![0] === last![0] && first![1] === last![1];
-    // const coords = isClosed ? ring : [...ring, first] as number[][];
+    // ensure ring is closed    
     const coords = ensureClosedRing(ring);
 
     const poly: GJFeature<GJPolygon> = {

@@ -1,3 +1,4 @@
+// src/presets/layers/base/baseLayers.ts
 import type { LayerDef } from '../../../api/types';
 
 export const topografiskBaseLayer: LayerDef = {
