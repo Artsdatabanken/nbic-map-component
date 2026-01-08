@@ -7,6 +7,8 @@ import { get as getProjection } from 'ol/proj';
 proj4.defs('EPSG:25833', '+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs +type=crs');
 proj4.defs('EPSG:25832', '+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs +type=crs');
 proj4.defs('EPSG:25835', '+proj=utm +zone=35 +ellps=GRS80 +units=m +no_defs +type=crs');
+proj4.defs('EPSG:32632', '+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs +type=crs');
+proj4.defs('EPSG:32633', '+proj=utm +zone=33 +datum=WGS84 +units=m +no_defs +type=crs');
 
 register(proj4);
 
