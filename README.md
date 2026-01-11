@@ -138,8 +138,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@ang
 export class AppComponent implements AfterViewInit {
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
   private map!: InstanceType<typeof NbicMapComponent>;
-  // Attach to a DOM element with id="map"
-  
+
   ngAfterViewInit(): void {
     this.map = new NbicMapComponent({
           target: this.mapEl.nativeElement,
