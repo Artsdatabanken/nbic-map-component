@@ -1,20 +1,98 @@
 # nbic-map-component
 
-Shared map component built on [OpenLayers](https://openlayers.org/) in TypeScript.  
-Designed to be framework-agnostic, so it can be integrated into Angular, React, Lit, or vanilla JS projects.
+Shared, framework-agnostic map component built on OpenLayers, designed to be used by host applications (Angular, React, Lit, plain TS/JS) through a stable API.
+
+The library separates what the host application wants to do (MapApi) from how it is rendered (MapEngine / OpenLayers), making it easier to maintain, test, and extend.
 
 ---
 
-## ✨ Features
+## Architecture
+```bash
+The architecture is intentionally layered:
 
-- 🌍 OpenLayers-based map wrapper
-- 📦 Distributed as **ESM + CJS** with TypeScript types
-- 🔒 Strict TypeScript config
-- 🧪 Unit tests with [Vitest](https://vitest.dev)
-- 🛠️ Linting with [ESLint 9 flat config](https://eslint.org/)
-- 🎨 Formatting with Prettier
-- ⚡ Zero-config bundling via [tsup](https://tsup.egoist.dev/)
-- 🚀 Playground with [Vite](https://vitejs.dev)
+Host app (Angular/React/Lit/vanilla)
+   |
+   |  calls methods + subscribes to events
+   v
+MapApi (public facade)
+   |
+   |  delegates 1:1 to an engine, keeps public types stable
+   v
+MapEngine (interface)
+   |
+   |  concrete implementation chosen at runtime (or build-time)
+   v
+OlMapEngine (OpenLayers implementation)
+   |
+   +--> LayerRegistry (indexes layers/sources)
+   +--> Adapters (LayerDef -> OL layer, StyleDef -> OL style, SourceDef -> OL source)
+   +--> Controllers (Draw / Hover / Select / Geo / Controls / Zoom)
+   |
+   v
+OpenLayers (ol/Map, ol/layer, ol/source, ol/interaction, ol/style)
+```
+
+### Design description
+```bash
+The host application (Angular, React, Lit, etc.):
+	•	Owns application state
+	•	Decides when and what to draw (layers, features, interactions)
+	•	Talks only to MapApi
+
+It never accesses OpenLayers directly.
+
+MapApi
+	•	Public API exposed by nbic-map-component
+	•	Stable contract for host applications
+	•	Methods like:
+	•	adding/removing layers
+	•	starting/stopping drawing
+	•	selecting features
+	•	controlling interactions
+
+MapEngine
+	•	Internal orchestration layer
+	•	Translates MapApi calls into engine actions
+	•	No OpenLayers imports
+	•	Makes it possible to swap rendering engines in the future
+
+OlMapEngine
+	•	Concrete implementation using OpenLayers
+	•	Owns:
+	•	ol/Map
+	•	layers, sources, interactions
+	•	OpenLayers-specific logic (cluster, hover, select, draw)
+
+Why this design?
+	•	Clear separation of concerns
+	•	Host apps stay simple and future-proof
+	•	OpenLayers complexity is fully encapsulated
+	•	Easier testing and playground setup
+````
+---
+
+## Internal structure
+```bash
+src/
+├─ api/                 # Public types & events (no OpenLayers imports)
+│  ├─ types.ts
+│  ├─ events.ts
+│
+├─ core/
+│  ├─ MapApi.ts         # Public facade
+│  ├─ MapEngine.ts     # Internal engine interface
+│
+│  └─ ol/
+│     ├─ OlMapEngine.ts
+│     ├─ adapters/     # Layer / source / style adapters
+│     ├─ interactions/ # Draw, Hover, Select controllers
+│     ├─ layers/       # LayerRegistry, base-layer logic
+│     ├─ utils/        # Geometry, extent, projection helpers
+│
+├─ presets/             # Predefined layers & sources (WMTS, base maps)
+│
+└─ index.ts             # Public entry point
+```
 
 ---
 
@@ -44,7 +122,7 @@ This repo includes a small Vite-powered playground to test the component in the 
 
 ### Start it
 ```bash
-npx vite
+npm run dev
 ```
 
 ## 📖 Usage
@@ -52,18 +130,42 @@ npx vite
 ```bash
 npm install nbic-map-component
 ```
-### Basic usage in your app
+### Basic usage in Angular
 ```bash
-import { NbicMapComponent } from 'nbic-map-component';
+import { NbicMapComponent, MapEvents } from 'nbic-map-component';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 
-// Attach to a DOM element with id="map"
-const map = new NbicMapComponent({
-  target: 'map',
-  center: [0, 0], // EPSG:3857 coordinates
-  zoom: 2,
-});
+export class AppComponent implements AfterViewInit {
+  @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
+  private map!: InstanceType<typeof NbicMapComponent>;
+  // Attach to a DOM element with id="map"
+  
+  ngAfterViewInit(): void {
+    this.map = new NbicMapComponent({
+          target: this.mapEl.nativeElement,
+          projection: 'EPSG:3857',          // View must match WMTS projection
+          center: [1157722.7042500454, 9208962.278247332],
+          zoom: 4,
+          minZoom: 1,
+          maxZoom: 18,
+          controls: { scaleLine: true, fullscreen: true, geolocation: true, zoom: true, attribution: true },
+        });
 
-// Control from code
-map.setZoom(5);
-map.setCenter([1000000, 5000000]);
+    this.map.on(MapEvents.Ready, () => {
+          this.mapReadyAction.next(true);
+          this.map.activateHoverInfo();
+        });
+  }
+}
+```
+### html
+```bash
+<div #mapEl class="map"></div>
+```
+### css
+```bash
+.map {
+    height: 60vh;
+    width: 100%;
+}
 ```
