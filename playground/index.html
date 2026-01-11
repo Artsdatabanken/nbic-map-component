@@ -2,23 +2,112 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <title>NBIC Map Playground</title>
-    <style>
-        #map {
-            width: 100%;
-            height: 100vh;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nbic-map-component playground</title>
+  <link rel="stylesheet" href="./playground.css" />
 </head>
 
-<body>    
-    <!-- <button onclick="updateGeojson()">Update GeoJSON</button> -->
-    <div id="map"></div>
-    <!-- <div id="mapA" style="height: 50vh"></div>
-    <div id="mapB" style="height: 50vh; margin-top: 8px"></div> -->
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="title">nbic-map-component</div>
+        <div class="subtitle">Playground</div>
+      </div>
 
-    <script type="module" src="/index.ts"></script>
+      <section class="panel">
+        <h3>Base map</h3>
+        <div class="row">
+          <label for="baseSelect">Active base</label>
+          <select id="baseSelect"></select>
+        </div>
+        <div class="row">
+          <button id="btnFitNorway" type="button">Fit Norway</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>Overlays</h3>
+        <div class="row">
+          <button id="overlayToggles"></button>
+        </div>        
+      </section>
+
+      <section class="panel">
+        <h3>Draw</h3>
+        <div class="grid">
+          <label>
+            Draw:
+            <select id="drawKind">
+              <option value="Point">Point</option>
+              <option value="LineString">Line</option>
+              <option value="Polygon">Polygon</option>
+              <option value="Box">Box</option>
+              <option value="Circle">Circle</option>
+              <option value="Text">Text</option>
+            </select>
+          </label>
+        </div>
+        <br>
+        <div class="grid">
+          <!-- <button id="btnDrawPoint" type="button">Point</button>
+          <button id="btnDrawLine" type="button">Line</button>
+          <button id="btnDrawPoly" type="button">Polygon</button>
+          <button id="btnDrawCircle" type="button">Circle</button>
+          <button id="btnDrawBox" type="button">Box</button> -->
+          <button id="drawStart" type="button">Start</button>
+          <button id="drawStop" type="button">Stop</button>
+          <button id="drawUndo" type="button">Undo last point</button>
+          <button id="drawFinish" type="button">Finish</button>
+          <button id="drawClear" type="button">Clear drawn</button>
+          <button id="drawAbort" type="button">Abort</button>
+        </div>
+        <div class="row">
+          <label><input id="editingEnabled" type="checkbox" checked /> Edit (Modify+Snap)</label>
+        </div>
+        <div class="row">
+          <label><input id="verticesPersistent" type="checkbox" /> Persistent vertices</label>
+        </div>
+        <div class="row">
+          <label><input id="interactiveBuffer" type="checkbox" /> Interactive buffer</label>
+        </div>
+        <div class="row">
+          <label><input id="selectedStroke" type="checkbox" /> Selected stroke</label>
+        </div>
+        <!-- <div class="row">
+          <label><input id="chkEdit" type="checkbox" checked /> Edit (Modify+Snap)</label>
+        </div> -->
+        <!-- <div class="row">
+          <label><input id="chkPersistentVertices" type="checkbox" /> Persistent vertices</label>
+        </div> -->
+      </section>
+
+      <section class="panel">
+        <h3>Hover</h3>
+        <div class="row">
+          <button id="btnActivateHover" type="button">Activate hover info</button>
+        </div>
+        <div class="row">
+          <button id="btnDeactivateHover" type="button">Deactivate hover info</button>
+        </div>        
+      </section>
+
+      <section class="panel">
+        <h3>Events</h3>
+        <div id="eventLog" class="log" aria-label="event log"></div>
+        <div class="row">
+          <button id="btnClearLog" type="button">Clear log</button>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <div id="map" class="map"></div>
+    </main>
+  </div>
+
+  <script type="module" src="/index.ts"></script>
 </body>
 
 </html>

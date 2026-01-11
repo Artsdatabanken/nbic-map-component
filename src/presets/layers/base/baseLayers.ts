@@ -1,6 +1,50 @@
 // src/presets/layers/base/baseLayers.ts
 import type { LayerDef } from '../../../api/types';
 
+export const svalbardBaseLayer: LayerDef = {
+    id: 'svalbard',
+    kind: 'tile',
+    base: 'regional',
+    visible: false,
+    opacity: 1,
+    source: {
+        type: 'wmts',
+        options: {
+            url: 'https://geodata.npolar.no/arcgis/rest/services/Basisdata/NP_Basiskart_Svalbard_WMTS_32633/MapServer/WMTS?',
+            layer: 'Basisdata_NP_Basiskart_Svalbard_WMTS_32633',
+            projection: 'EPSG:32633',
+            matrixSetId: 'default028mm',        // critical for ArcGIS service
+            format: 'image/jpgpng',
+            style: 'default',
+            wrapX: true,
+            // levels: 17,
+            attribution: '© Kartverket / Norsk Polarinstitutt',
+        },
+    },
+};
+
+export const janmayenBaseLayer: LayerDef = {
+    id: 'janmayen',
+    kind: 'tile',
+    base: 'regional',
+    visible: false,
+    opacity: 1,
+    source: {
+        type: 'wmts',
+        options: {
+            url: 'https://geodata.npolar.no/arcgis/rest/services/Basisdata/NP_Basiskart_JanMayen_WMTS_25833/MapServer/WMTS?',
+            layer: 'NP_Basiskart_JanMayen_WMTS_25833',
+            projection: 'EPSG:25833',
+            matrixSetId: 'default028mm',        // critical for ArcGIS service
+            format: 'image/jpgpng',
+            style: 'default',
+            // levels: 17,
+            wrapX: true,
+            attribution: '© Kartverket / Norsk Polarinstitutt',
+        },
+    },
+};
+
 export const topografiskBaseLayer: LayerDef = {
     id: 'topografisk',
     name: 'Topografisk',
