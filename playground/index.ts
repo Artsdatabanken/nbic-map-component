@@ -29,13 +29,20 @@ const map = createMap('map',{
 // OSM base (super)
 map.addLayer(nbicMapPresets.osm); // temporarily add OSM for initial view
 // --- Layers ---
+const topo = nbicMapPresets.topografiskBaseLayer;
+
+// if you want to use UTM33N for topo instead of WebMercator, uncomment this:
+// if (topo.source.type === 'wmts' ) {
+//     topo.source.options.projection = 'EPSG:25833';
+//     topo.source.options.matrixSet = 'utm33n';
+// }
+
 const baseLayers: LayerDef[] = [
   // Kartverket Topo (regional sheet)
   {
-    ...nbicMapPresets.topografiskBaseLayer,
+    ...topo,
     id: 'kv_topo',
-    base: 'regional',
-    visible: true,
+    base: 'regional',    
   },
   {
     ...nbicMapPresets.topo4graatoneBaseLayer,
