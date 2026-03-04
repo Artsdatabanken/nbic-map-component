@@ -1,11 +1,25 @@
 import { ImageTile } from 'ol';
-import { createMap, nbicMapPresets, type LayerDef } from '../src/index';
+import { createMap, nbicMapPresets, type LayerDef, createNibToken, type NibTokenManager } from '../src/index';
 import { buildSamples } from './samples';
 import { wireUi } from './ui';
 import 'ol/ol.css';
 
 const mapEl = document.getElementById('map');
 if (!mapEl) throw new Error('Missing #map element');
+
+// Initialize NiB token manager for authenticated tile access
+const nibTokenManager: NibTokenManager = createNibToken({
+  // tokenUrl: 'https://artskart.artsdatabanken.no/appapi/api/token/gettoken2', // default
+  expiryMarginMinutes: 10,
+  onTokenFetched: (token) => console.log('NiB token fetched:', token.substring(0, 30) + '...'),
+  onError: (err) => console.warn('NiB token fetch failed:', err.message),
+});
+
+nibTokenManager.init().then(() => {
+  console.log('NiB token Manager initialized, token cached');
+}).catch(() => {
+  console.warn('NiB token: Initial token fetch failed, will retry automatically');
+});
 
 // NOTE: ids live in playground/index.html
 const eventsEl = document.getElementById('eventLog');
@@ -35,8 +49,9 @@ const topo = nbicMapPresets.topografiskBaseLayer;
 const nib = nbicMapPresets.nib;
 if (nib.source.type === 'wmts') {
   nib.source.options.tileLoadFunction = (tile, src) => {
-    // Example: add cache-busting parameter to force reload (e.g., for testing)
-    ((tile as ImageTile).getImage() as HTMLImageElement).src = src + '&token=' ;
+    const token = nibTokenManager.getToken();
+    const separator = src.includes('?') ? '&' : '?';
+    ((tile as ImageTile).getImage() as HTMLImageElement).src = token ? `${src}${separator}token=${token}` : src;
   };
 }
 // if you want to use UTM33N for topo instead of WebMercator, uncomment this:
