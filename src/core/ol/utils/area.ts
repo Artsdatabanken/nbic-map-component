@@ -59,6 +59,29 @@ export function getCenterFromPolygon(polygonCoordinates: number[][]): MapCoord |
     return null;        
 }
 
+/** Compute centroid from an array of coordinates.
+ * @param coordinates Array of [x, y] coordinates.
+ * @returns Centroid as [x, y] or null if input is invalid.
+ */
+export function getCentroid(coordinates: number[][]): MapCoord | null {
+    if (!coordinates || coordinates.length === 0) {
+        return null;
+    }
+
+    let sumX = 0;
+    let sumY = 0;
+
+    for (const point of coordinates) {
+        sumX += point[0]!;
+        sumY += point[1]!;
+    }
+
+    const centroidX = sumX / coordinates.length;
+    const centroidY = sumY / coordinates.length;
+
+    return [centroidX, centroidY];
+}
+
 export function getExtentFromPolygon(
     polygonCoordinates: number[][]
 ): number[] | null {

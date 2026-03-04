@@ -1,3 +1,4 @@
+import { ImageTile } from 'ol';
 import { createMap, nbicMapPresets, type LayerDef } from '../src/index';
 import { buildSamples } from './samples';
 import { wireUi } from './ui';
@@ -31,6 +32,13 @@ map.addLayer(nbicMapPresets.osm); // temporarily add OSM for initial view
 // --- Layers ---
 const topo = nbicMapPresets.topografiskBaseLayer;
 
+const nib = nbicMapPresets.nib;
+if (nib.source.type === 'wmts') {
+  nib.source.options.tileLoadFunction = (tile, src) => {
+    // Example: add cache-busting parameter to force reload (e.g., for testing)
+    ((tile as ImageTile).getImage() as HTMLImageElement).src = src + '&token=' ;
+  };
+}
 // if you want to use UTM33N for topo instead of WebMercator, uncomment this:
 // if (topo.source.type === 'wmts' ) {
 //     topo.source.options.projection = 'EPSG:25833';
@@ -42,17 +50,20 @@ const baseLayers: LayerDef[] = [
   {
     ...topo,
     id: 'kv_topo',
-    base: 'regional',    
+    base: 'regional',
   },
   {
     ...nbicMapPresets.topo4graatoneBaseLayer,
   },
   {
-        ...nbicMapPresets.svalbardBaseLayer,
-    },
-    {
-        ...nbicMapPresets.janmayenBaseLayer,
-    }
+    ...nbicMapPresets.svalbardBaseLayer,
+  },
+  {
+    ...nbicMapPresets.janmayenBaseLayer,
+  },
+  {
+    ...nib,
+  },
 ];
 
 for (const l of baseLayers) map.addLayer(l);
