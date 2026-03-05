@@ -1,6 +1,9 @@
 node_modules
 dist
+playground-dist
 .DS_Store
 *.log
 coverage
 nbic-map-component-0.1.0.tgz
+steinhoem-nbic-map-component-*.tgz
+.vs

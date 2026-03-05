@@ -1,4 +1,5 @@
 // src/api/types.ts
+import { Tile } from 'ol';
 import type { Extent } from 'ol/extent';
 export type MapCoord = [number, number];         // EPSG:3857 by default (configurable)
 export type DrawKind = 'Point' | 'LineString' | 'Polygon' | 'Circle' | 'Text' | 'Box';
@@ -117,6 +118,7 @@ export interface WMTSDefOptions {
 
     /** KVP URL param override hook (rarely needed) */
     urlParamOverrides?: Record<string, string>;
+    tileLoadFunction?: (tile: Tile, src: string) => void; // custom tile load function (e.g. for auth)
 }
 
 export interface WFSDefOptions {

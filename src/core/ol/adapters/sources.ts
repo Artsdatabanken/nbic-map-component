@@ -4,7 +4,7 @@ import OSM from 'ol/source/OSM';
 import XYZ from 'ol/source/XYZ';
 import WMTS from 'ol/source/WMTS';
 import VectorSource from 'ol/source/Vector';
-import type { Feature } from 'ol';
+import type { Feature, ImageTile } from 'ol';
 import GeoJSON from 'ol/format/GeoJSON';
 import { makeGridFromExtent } from './wmts-grid';
 import { createWfsVectorSource } from './wfs-loader';
@@ -128,7 +128,8 @@ export function toOlSource(def: SourceDef): OlSource {
                     ? { urls: [baseUrl], requestEncoding: 'REST' as const }
                     : { url: o.url, requestEncoding: 'KVP' as const }),
                 crossOrigin: 'anonymous',
-            });
+                tileLoadFunction: o.tileLoadFunction ? (tile, src) => o.tileLoadFunction!(tile, src) : undefined
+           });
 
             // Optional param overrides (e.g., force tilematrixset)
             if (o.urlParamOverrides && Object.keys(o.urlParamOverrides).length) {

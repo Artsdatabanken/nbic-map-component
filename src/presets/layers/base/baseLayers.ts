@@ -98,7 +98,7 @@ export const nib: LayerDef = {
     source: {
         type: 'wmts',
         options: {
-            url: 'https://opencache.statkart.no/gatekeeper/gk/gk.open_nib_web_mercator_wmts_v2',
+            url: 'https://tilecache.norgeibilder.no/wmts/webmercator',
             layer: 'Nibcache_web_mercator_v2',
             format: 'image/png',
             style: 'default',
@@ -106,7 +106,7 @@ export const nib: LayerDef = {
             projection: 'EPSG:3857',
             wrapX: true,
             opacity: 1,
-            attribution: 'Kartverket',
+            attribution: 'Kartverket'
         },
     },
 };
