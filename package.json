@@ -1,6 +1,6 @@
 {
   "name": "@artsdatabanken/nbic-map-component",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Shared map component built on OpenLayers",
   "type": "module",
   "main": "./dist/index.cjs",
