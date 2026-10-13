@@ -106,6 +106,7 @@ export interface MapEngine {
     // Utils
     getTargetElement(): HTMLElement | null;
     getCenterFromExtent(extent: Extent): MapCoord;
+    getZoomForGroundResolution(lonLat: [number, number], metersPerPixel: number): number;
 }
 
 export type MapEngineFactory = (events: Emitter<MapEventMap>) => MapEngine;

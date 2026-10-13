@@ -353,3 +353,39 @@ export interface InsertGeomOptions {
     /** CRS of the incoming coordinates. If omitted, assume map/view projection. */
     dataProjection?: string; // e.g. 'EPSG:4326' or 'EPSG:25833'
 }
+
+export interface PlaceSearchOptions {
+    /** Abort to cancel, e.g. while the user is still typing. The promise then rejects with an AbortError. */
+    signal?: AbortSignal;
+    /** Max number of results, 1–500. Default: 10 */
+    limit?: number;
+    /** Also match similar spellings, e.g. "Galdhopiggen" finds Galdhøpiggen. */
+    fuzzy?: boolean;
+    /** Only search in these municipalities (kommunenummer), e.g. ['5501']. */
+    municipalityNumbers?: string[];
+    /** Only search in these counties (fylkesnummer), e.g. ['55']. */
+    countyNumbers?: string[];
+}
+
+/**
+ * One spelling of a place name from Geonorge. A place with several spellings
+ * (e.g. Tromsø / Romsa / Tromssa) gives one result per spelling, sharing `placeId`.
+ */
+export interface PlaceSearchResult {
+    /** Unique per result. */
+    id: string;
+    /** Geonorge stedsnummer, shared by all spellings of a place. */
+    placeId: string;
+    name: string;
+    /** e.g. 'Norsk', 'Nordsamisk', 'Kvensk' */
+    language: string;
+    /** Geonorge navneobjekttype, e.g. 'Fjord', 'By' */
+    type: string;
+    /** As Geonorge delivers them, including Sami/Kven variants. Empty for e.g. sea areas. */
+    municipalities: string[];
+    counties: string[];
+    /** WGS84 */
+    coordinates: { lat: number; lon: number };
+    /** Zoom for this map's view that suits the place type. */
+    zoomLevel: number;
+}

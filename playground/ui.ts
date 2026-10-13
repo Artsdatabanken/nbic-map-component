@@ -2,7 +2,7 @@
 import { nbicMapPresets } from '../src';
 import { MapAPI } from '../src/api/MapAPI';
 // import type { MapEngine } from '../src/core/MapEngine'; // adjust path if different
-import type { DrawKind, DrawStyleOptions } from '../src/api/types';
+import type { DrawKind, DrawStyleOptions, PlaceSearchResult } from '../src/api/types';
 
 type UiLayers = {
   cluster: string;
@@ -46,6 +46,46 @@ export function wireUi(cfg: WireUiConfig) {
     map.setCenter(transformCoordsFrom);
     map.setZoom(4);
     log('view: fit Norway');
+  });
+
+  // ---- place search ----
+  const placeSearch = $('placeSearch') as HTMLInputElement;
+  const placeResults = $('placeResults');
+  let placeSearchTimer: number | undefined;
+  let placeSearchController: AbortController | undefined;
+
+  const goToPlace = (place: PlaceSearchResult) => {
+    map.setCenter(map.transformCoordsFrom([place.coordinates.lon, place.coordinates.lat], 'EPSG:4326', 'EPSG:3857'));
+    map.setZoom(place.zoomLevel);
+    log(`place: ${place.name} (${place.type}) zoom=${place.zoomLevel.toFixed(2)}`);
+  };
+
+  const renderPlaces = (places: PlaceSearchResult[]) => {
+    placeResults.replaceChildren(
+      ...places.map((place) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        const details = document.createElement('small');
+        details.textContent = [place.type, place.language, ...place.municipalities, ...place.counties].join(' · ');
+        button.append(place.name, details);
+        button.addEventListener('click', () => goToPlace(place));
+        return button;
+      }),
+    );
+  };
+
+  placeSearch.addEventListener('input', () => {
+    window.clearTimeout(placeSearchTimer);
+    placeSearchController?.abort();
+    placeSearchTimer = window.setTimeout(async () => {
+      const controller = new AbortController();
+      placeSearchController = controller;
+      try {
+        renderPlaces(await map.searchPlaces(placeSearch.value, { signal: controller.signal }));
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') log(`place search failed: ${String(err)}`);
+      }
+    }, 300);
   });
   // ---- helpers ----
   const bindClick = (id: string, fn: () => void) => $(id).addEventListener('click', fn);

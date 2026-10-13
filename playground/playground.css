@@ -132,6 +132,22 @@ button.ghost {
   grid-column: 1 / -1;
 }
 
+.place-results {
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.place-results button {
+  text-align: left;
+}
+
+.place-results small {
+  display: block;
+  color: var(--muted);
+}
+
 .log {
   height: 220px;
   overflow: auto;

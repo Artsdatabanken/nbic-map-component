@@ -168,3 +168,31 @@ export class AppComponent implements AfterViewInit {
     width: 100%;
 }
 ```
+
+### Place search
+`map.searchPlaces(query, options?)` does a prefix search in [Geonorge stedsnavn](https://ws.geonorge.no/stedsnavn/v1/#/default/get_navn) straight from the browser and returns one `PlaceSearchResult` per spelling (Tromsø, Romsa and Tromssa are three results with the same `placeId`).
+
+- `zoomLevel` suits the place type (a church gets closer than a fjord) and is computed for this map's view, so it can be passed straight to `setZoom`.
+- `coordinates` are WGS84 `{ lat, lon }`.
+- Options: `signal`, `limit` (default 10, max 500), `fuzzy`, `municipalityNumbers`, `countyNumbers`.
+- Abort `signal` to cancel. The promise then rejects with an `AbortError`.
+
+The zoom per type lives in `src/core/place-search/place-zoom.ts`.
+
+Debounced search with RxJS:
+```ts
+const places$ = term$.pipe(
+  debounceTime(300),
+  distinctUntilChanged(),
+  switchMap((term) => new Observable<PlaceSearchResult[]>((subscriber) => {
+    const controller = new AbortController();
+    map.searchPlaces(term, { signal: controller.signal })
+      .then((places) => { subscriber.next(places); subscriber.complete(); }, (err) => subscriber.error(err));
+    return () => controller.abort();
+  })),
+);
+
+// on select
+map.setCenter(map.transformCoordsFrom([place.coordinates.lon, place.coordinates.lat], 'EPSG:4326', 'EPSG:25833'));
+map.setZoom(place.zoomLevel);
+```
