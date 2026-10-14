@@ -11,9 +11,12 @@ import type {
     InsertGeomOptions,
     UpdateGeoJSONLayerOptions,
     AdoptLayerOptions,
-    EnableEditingOptions
+    EnableEditingOptions,
+    PlaceSearchOptions,
+    PlaceSearchResult
 } from './types';
 import type { MapEngine } from '../core/MapEngine';
+import { searchGeonorgePlaces } from '../core/place-search/geonorge';
 import { createEmitter } from '../core/state/store';
 import { createOlEngine } from '../core/ol/OlMapEngine';
 import type { MapEventMap } from './events';
@@ -224,5 +227,21 @@ export class MapAPI {
 
     getCenterFromExtent(extent: Extent): MapCoord {
         return this.engine.getCenterFromExtent(extent);
+    }
+
+    // Place search
+    /**
+     * Prefix search for place names in Geonorge (https://ws.geonorge.no/stedsnavn/v1/#/default/get_navn).
+     * `zoomLevel` is computed for this map's view. Abort `options.signal` to cancel.
+     */
+    async searchPlaces(query: string, options?: PlaceSearchOptions): Promise<PlaceSearchResult[]> {
+        const places = await searchGeonorgePlaces(query, options);
+        return places.map(({ targetMetersPerPixel, ...place }) => ({
+            ...place,
+            zoomLevel: this.engine.getZoomForGroundResolution(
+                [place.coordinates.lon, place.coordinates.lat],
+                targetMetersPerPixel,
+            ),
+        }));
     }
 }

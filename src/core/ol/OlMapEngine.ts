@@ -38,6 +38,7 @@ import { toViewCoord, transformCoordsFrom, transformCoordsArrayFrom, transformEx
 import { Coordinate } from 'ol/coordinate';
 import { getCenter } from 'ol/extent';
 import { SelectController } from './select/SelectController';
+import { zoomForGroundResolution } from './zoom/ground-resolution';
 
 function resolveVectorSource(layer: VectorLayer<VectorSource<OlFeature<Geometry>>>): VectorSource<OlFeature<Geometry>> | null {
     const src = layer.getSource();
@@ -575,6 +576,10 @@ export function createOlEngine(events: Emitter<MapEventMap>): MapEngine {
 
         getCenterFromExtent: (extent: Extent): MapCoord => {
             return getCenter(extent) as MapCoord;
-        }
+        },
+
+        getZoomForGroundResolution: (lonLat, metersPerPixel) => {
+            return zoomForGroundResolution(map!.getView(), lonLat, metersPerPixel);
+        },
     };
 }
