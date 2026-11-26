@@ -37,7 +37,7 @@ export interface NibTokenManager {
 }
 
 const DEFAULT_CONFIG: Required<Omit<NibTokenConfig, 'onTokenFetched' | 'onError'>> = {
-    tokenUrl: 'https://artskart.artsdatabanken.no/appapi/api/token/gettoken2',
+    tokenUrl: 'https://artskart2.artsdatabanken.no/appapi/api/token/gettoken2',
     storageKey: 'nbic-map-nib-token',
     expiryMarginMinutes: 10,
     retryIntervalMs: 60000,
