@@ -9,7 +9,7 @@ if (!mapEl) throw new Error('Missing #map element');
 
 // Initialize NiB token manager for authenticated tile access
 const nibTokenManager: NibTokenManager = createNibToken({
-  // tokenUrl: 'https://artskart.artsdatabanken.no/appapi/api/token/gettoken2', // default
+  // tokenUrl: 'https://artskart2.artsdatabanken.no/appapi/api/token/gettoken2', // default
   expiryMarginMinutes: 10,
   onTokenFetched: (token) => console.log('NiB token fetched:', token.substring(0, 30) + '...'),
   onError: (err) => console.warn('NiB token fetch failed:', err.message),
